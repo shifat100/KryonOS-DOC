@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KryonOS Simulator v2.2 (Synced to Official C++ Source)</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:radial-gradient(ellipse at top,#1e1e3a 0%,#0a0a15 100%);color:#e0e0e8;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;min-height:100vh;display:flex;justify-content:center;align-items:flex-start;padding:24px;gap:24px;flex-wrap:wrap}
+  .device{background:linear-gradient(145deg,#2d2d44,#1a1a2e);border-radius:28px;padding:22px;box-shadow:0 30px 80px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.08);border:1px solid #3d3d5c}
+  .screen-frame{background:#000;border-radius:6px;padding:6px;border:5px solid #10101c;box-shadow:inset 0 0 30px rgba(0,0,0,.9),0 0 0 1px #3d3d5c}
+  #screen{display:block;width:240px;height:320px;image-rendering:pixelated;background:#000;cursor:crosshair;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;touch-action:none}
+  .brand{text-align:center;color:#6c6c8e;font-size:10px;letter-spacing:3px;margin-top:14px;font-weight:700}
+  .brand span{color:#07E0}
+  .controls{display:flex;justify-content:space-between;margin-top:16px;gap:8px}
+  .ctrl-btn{flex:1;background:linear-gradient(180deg,#3d3d5c,#2a2a42);color:#b0b0c8;border:none;padding:10px 6px;border-radius:8px;font-size:10px;font-weight:700;cursor:pointer;box-shadow:0 2px 0 #15152a,inset 0 1px 0 rgba(255,255,255,.1)}
+  .ctrl-btn:hover{background:linear-gradient(180deg,#4d4d6c,#35354d);color:#fff}
+  .ctrl-btn:active{transform:translateY(2px);box-shadow:0 0 0 #15152a}
+  .panel{background:linear-gradient(145deg,#2d2d44,#1e1e30);border-radius:16px;padding:18px;width:460px;max-width:100%;border:1px solid #3d3d5c;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+  .panel h2{font-size:12px;margin-bottom:14px;color:#07E0;text-transform:uppercase;letter-spacing:2px;display:flex;align-items:center;gap:8px}
+  .panel h2::before{content:'';width:6px;height:6px;border-radius:50%;background:#07E0;box-shadow:0 0 10px #07E0}
+  .panel textarea,.panel input[type="text"]{width:100%;background:#0a0a15;color:#6EE7B7;border:1px solid #2a2a42;border-radius:8px;padding:10px 12px;font-family:'Monaco','Menlo','Courier New',monospace;font-size:12px;resize:vertical;transition:border-color .15s}
+  .panel textarea:focus,.panel input[type="text"]:focus{outline:none;border-color:#07E0}
+  .panel textarea{height:240px;line-height:1.5}
+  .panel input[type="text"]{margin-bottom:8px;color:#fff}
+  .panel-label{font-size:10px;color:#888;margin-bottom:5px;text-transform:uppercase;letter-spacing:1px}
+  .panel-row{margin-bottom:10px}
+  .btn{background:linear-gradient(180deg,#07E0,#06c);color:#001;border:none;padding:9px 16px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;margin-right:6px;margin-top:8px;box-shadow:0 3px 0 #046}
+  .btn:hover{filter:brightness(1.1)}
+  .btn:active{transform:translateY(2px);box-shadow:0 1px 0 #046}
+  .btn.secondary{background:linear-gradient(180deg,#3d3d5c,#2a2a42);color:#ccc;box-shadow:0 3px 0 #15152a}
+  .btn.danger{background:linear-gradient(180deg,#f55,#c33);color:#fff;box-shadow:0 3px 0 #811}
+  #console{background:#05050d;color:#6EE7B7;font-family:'Monaco',monospace;font-size:11px;padding:10px;border-radius:8px;height:120px;overflow-y:auto;margin-top:12px;border:1px solid #2a2a42;line-height:1.5}
+  #console .err{color:#f77}
+  #console .info{color:#7df}
+  #console .ok{color:#6EE7B7}
+  #console .warn{color:#fd7}
+  .status-bar{display:flex;justify-content:space-between;font-size:10px;color:#666;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #2a2a42}
+  .status-bar span{color:#07E0}
+</style>
+</head>
+<body>
+
+<div class="device">
+  <div class="screen-frame">
+    <canvas id="screen" width="240" height="320"></canvas>
+  </div>
+  <div class="brand">KRYON<span>OS</span> · ESP32 SIMULATOR v2.2</div>
+  <div class="controls">
+    <button class="ctrl-btn" data-key="up">▲ UP</button>
+    <button class="ctrl-btn" data-key="sel">● SEL</button>
+    <button class="ctrl-btn" data-key="dn">▼ DN</button>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="status-bar">
+    <div>State: <span id="state-label">LAUNCHER</span></div>
+    <div>FPS: <span id="fps-label">--</span></div>
+  </div>
+  <h2>App Editor (Duktape JS)</h2>
+  <div class="panel-row"><div class="panel-label">App Name</div>
+    <input type="text" id="app-name" value="Prompt Test"></div>
+  <div class="panel-row"><div class="panel-label">Package Name (lowercase, dot-separated)</div>
+    <input type="text" id="app-pkg" value="com.demo.prompttest"></div>
+  <div class="panel-row"><div class="panel-label">main.js</div>
+    <textarea id="app-code" spellcheck="false">System.fillScreen(BLACK);
+System.setTextColor(GREEN);
+System.drawString("Prompt Test", 15, 20, 2);
+System.setTextColor(WHITE);
+System.drawString("Tap screen to prompt", 15, 70, 2);
+System.drawString("(Tap red X to exit)", 15, 90, 2);
+
+var result = "";
+
+while (true) {
+  System.fillScreen(BLACK);
+  System.setTextColor(GREEN);
+  System.drawString("Prompt Test", 15, 20, 2);
+  System.setTextColor(WHITE);
+  System.drawString("Tap to prompt", 15, 70, 2);
+  if (result) {
+    System.setTextColor(YELLOW);
+    System.drawString("Input Result:", 15, 120, 2);
+    System.setTextColor(WHITE);
+    System.drawString(result, 15, 145, 2);
+  }
+
+  var t = System.getTouch();
+  if (t.touched) {
+    result = System.prompt("Type something:", result);
+  }
+  System.delay(60);
+}</textarea></div>
+  <button class="btn" id="btn-install">💾 Install</button>
+  <button class="btn secondary" id="btn-run">▶ Run</button>
+  <button class="btn danger" id="btn-reset">⟲ Reset FS</button>
+  <div id="console"></div>
+</div>
+
+<script>
+/* =========================================================
+   Color Constants (exact match to JSBindings.cpp)
+   ========================================================= */
+const TFT_BLACK   = 0x0000;
+const TFT_WHITE   = 0xFFFF;
+const TFT_RED     = 0xF800;
+const TFT_GREEN   = 0x07E0;
+const TFT_BLUE    = 0x001F;
+const TFT_YELLOW  = 0xFFE0;
+const TFT_CYAN    = 0x07FF;
+const TFT_MAGENTA = 0xF81F;
+const TFT_ORANGE  = 0xFD20;
+const TFT_DARKGREY = 0x7BEF;
+const TFT_LIGHTGREY= 0xC618;
+const TFT_PURPLE  = 0x780F;
+
+const KRYONOS_VERSION = "1.0.0";
+const KRYONOS_API_LEVEL = 1;
+
+/* State Constants matching main.cpp */
+const STATE_LAUNCHER             = 0;
+const STATE_SETTINGS             = 1;
+const STATE_RUN_APP              = 2;
+const STATE_INSTALLER            = 3;
+const STATE_CALIBRATOR           = 4;
+const STATE_WEB_APP              = 5;
+const STATE_SETTINGS_WIFI        = 6;
+const STATE_SETTINGS_ABOUT       = 7;
+const STATE_SETTINGS_APPS        = 8;
+const STATE_SETTINGS_TIME        = 9;
+const STATE_SETTINGS_TIME_MANUAL = 10;
+const STATE_UPDATER_BOOT         = 11;
+const STATE_UPDATER_MANUAL       = 12;
+const STATE_APP_STORE            = 13;
+const STATE_HELP_CENTER          = 14;
+
+/* ---------- logger ---------- */
+const consoleEl = document.getElementById('console');
+function log(msg, cls){
+  const d = document.createElement('div');
+  if (cls) d.className = cls;
+  d.textContent = '[' + new Date().toLocaleTimeString('en-GB', {hour12:false}) + '] ' + msg;
+  consoleEl.appendChild(d);
+  while (consoleEl.children.length > 300) consoleEl.removeChild(consoleEl.firstChild);
+  consoleEl.scrollTop = consoleEl.scrollHeight;
+}
+
+/* =========================================================
+   TFT Display with Datum Support
+   ========================================================= */
+const TL_DATUM = 0, TC_DATUM = 1, MC_DATUM = 4, ML_DATUM = 3;
+
+class TFTDisplay {
+  constructor(cv){
+    this.canvas = cv;
+    this.ctx = cv.getContext('2d', {alpha:false});
+    this.ctx.imageSmoothingEnabled = false;
+    this.W = cv.width; this.H = cv.height;
+    this.fgColor = '#fff'; this.bgColor = null;
+    this.textSize = 1; this.textDatum = TL_DATUM;
+    this.sprite = null; this.spriteBound = false;
+    this.clear();
+  }
+  get target(){ return (this.spriteBound && this.sprite) ? this.sprite : this; }
+  clear(){ this.ctx.fillStyle = '#000'; this.ctx.fillRect(0, 0, this.W, this.H); }
+  static c565(c){
+    const r = ((c >> 11) & 0x1F) * 255 / 31 | 0;
+    const g = ((c >> 5) & 0x3F) * 255 / 63 | 0;
+    const b = (c & 0x1F) * 255 / 31 | 0;
+    return `rgb(${r},${g},${b})`;
+  }
+  static FONTS = { 1: 8, 2: 14, 4: 26, 6: 44, 7: 44, 8: 56 };
+  fillScreen(c){ const t = this.target; t.ctx.fillStyle = TFTDisplay.c565(c); t.ctx.fillRect(0, 0, t.W, t.H); }
+  fillRect(x,y,w,h,c){ if(w<=0||h<=0)return; const t = this.target; t.ctx.fillStyle = TFTDisplay.c565(c); t.ctx.fillRect(x,y,w,h); }
+  drawRect(x,y,w,h,c){ const t = this.target; t.ctx.strokeStyle = TFTDisplay.c565(c); t.ctx.lineWidth = 1; t.ctx.strokeRect(x+.5,y+.5,Math.max(0,w-1),Math.max(0,h-1)); }
+  drawLine(x0,y0,x1,y1,c){ const t = this.target; t.ctx.strokeStyle = TFTDisplay.c565(c); t.ctx.beginPath(); t.ctx.moveTo(x0+.5,y0+.5); t.ctx.lineTo(x1+.5,y1+.5); t.ctx.stroke(); }
+  drawPixel(x,y,c){ const t = this.target; t.ctx.fillStyle = TFTDisplay.c565(c); t.ctx.fillRect(x,y,1,1); }
+  drawCircle(x,y,r,c){ const t = this.target; t.ctx.strokeStyle = TFTDisplay.c565(c); t.ctx.beginPath(); t.ctx.arc(x,y,Math.abs(r),0,Math.PI*2); t.ctx.stroke(); }
+  fillCircle(x,y,r,c){ const t = this.target; t.ctx.fillStyle = TFTDisplay.c565(c); t.ctx.beginPath(); t.ctx.arc(x,y,Math.abs(r),0,Math.PI*2); t.ctx.fill(); }
+  drawTriangle(x0,y0,x1,y1,x2,y2,c){ const t = this.target; t.ctx.strokeStyle = TFTDisplay.c565(c); t.ctx.beginPath(); t.ctx.moveTo(x0,y0); t.ctx.lineTo(x1,y1); t.ctx.lineTo(x2,y2); t.ctx.closePath(); t.ctx.stroke(); }
+  fillTriangle(x0,y0,x1,y1,x2,y2,c){ const t = this.target; t.ctx.fillStyle = TFTDisplay.c565(c); t.ctx.beginPath(); t.ctx.moveTo(x0,y0); t.ctx.lineTo(x1,y1); t.ctx.lineTo(x2,y2); t.ctx.closePath(); t.ctx.fill(); }
+  _rr(ctx,x,y,w,h,r){ r = Math.min(r,w/2,h/2); ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+  drawRoundRect(x,y,w,h,r,c){ const t = this.target; t.ctx.strokeStyle = TFTDisplay.c565(c); t.ctx.lineWidth = 1; this._rr(t.ctx,x+.5,y+.5,Math.max(0,w-1),Math.max(0,h-1),r); t.ctx.stroke(); }
+  fillRoundRect(x,y,w,h,r,c){ if(w<=0||h<=0)return; const t = this.target; t.ctx.fillStyle = TFTDisplay.c565(c); this._rr(t.ctx,x,y,w,h,r); t.ctx.fill(); }
+  drawFastVLine(x,y,h,c){ this.fillRect(x,y,1,h,c); }
+  drawFastHLine(x,y,w,c){ this.fillRect(x,y,w,1,c); }
+  setTextColor(fg,bg){ this.fgColor = TFTDisplay.c565(fg); this.bgColor = (bg != null) ? TFTDisplay.c565(bg) : null; }
+  setTextSize(s){ this.textSize = s; }
+  setTextDatum(d){ this.textDatum = d; }
+  drawString(str,x,y,font=2){
+    const t = this.target;
+    const base = TFTDisplay.FONTS[font] || 14;
+    const sz = Math.max(6, Math.floor(base * this.textSize));
+    t.ctx.font = `bold ${sz}px "Courier New",monospace`;
+    str = String(str);
+    const w = t.ctx.measureText(str).width;
+
+    let rx = x, ry = y;
+    if (this.textDatum === MC_DATUM) {
+      rx = x - w / 2;
+      ry = y - sz / 2;
+    } else if (this.textDatum === TC_DATUM) {
+      rx = x - w / 2;
+      ry = y;
+    } else if (this.textDatum === ML_DATUM) {
+      rx = x;
+      ry = y - sz / 2;
+    }
+
+    t.ctx.textBaseline = 'top';
+    t.ctx.textAlign = 'left';
+
+    if (this.bgColor) {
+      t.ctx.fillStyle = this.bgColor;
+      t.ctx.fillRect(rx, ry, w, sz);
+    }
+    t.ctx.fillStyle = this.fgColor;
+    t.ctx.fillText(str, rx, ry);
+  }
+  textWidth(str, font=2){
+    const base = TFTDisplay.FONTS[font] || 14;
+    const sz = Math.max(6, Math.floor(base * this.textSize));
+    this.ctx.font = `bold ${sz}px "Courier New",monospace`;
+    return this.ctx.measureText(String(str)).width;
+  }
+  color(r,g,b){
+    r = Math.max(0, Math.min(255, r|0));
+    g = Math.max(0, Math.min(255, g|0));
+    b = Math.max(0, Math.min(255, b|0));
+    return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
+  }
+}
+
+/* =========================================================
+   Virtual File System (aligned with FileSystem.cpp)
+   ========================================================= */
+class VirtualFS {
+  constructor(){ this.reset(); }
+  reset(){
+    this.files = new Map();
+    ['/local','/local/apps','/sd','/sd/apps','/local/tmp_download'].forEach(p => this.files.set(p, null));
+    this.files.set('/local/note.txt', 'Welcome to KryonOS!\n\nEdit this file with Notepad.');
+    this.files.set('/local/config_time.txt', 'UTC0|1|1'); // TZ|24H|NTP
+    this.files.set('/local/wifi.txt', 'HomeNetwork\npassword123');
+
+    this._seedApp('com.demo.hello', 'Hello Kryon',
+`System.fillScreen(BLACK);
+System.setTextColor(GREEN);
+System.drawString("Hello KryonOS!", 15, 40, 4);
+System.setTextColor(WHITE);
+System.drawString("OS: " + System.getOSVersion(), 15, 110, 2);
+System.drawString("API: " + System.getAPILevel(), 15, 130, 2);
+System.drawString("Free RAM: " + Math.floor(System.getInfo().freeRAM/1024) + " KB", 15, 150, 2);
+System.drawString("Tap to exit", 15, 220, 2);
+while (true) {
+  var t = System.getTouch();
+  if (t.touched) break;
+  System.delay(50);
+}`);
+
+    this._seedApp('com.demo.draw', 'Drawing Pad',
+`System.fillScreen(BLACK);
+System.setTextColor(GREEN);
+System.drawString("Draw with finger", 5, 5, 2);
+System.setTextColor(YELLOW);
+System.drawString("Top=toggle color", 5, 305, 1);
+var lastX = -1, lastY = -1, color = WHITE;
+while (true) {
+  var t = System.getTouch();
+  if (t.touched) {
+    if (t.y < 30) {
+      color = (color === WHITE) ? RED : WHITE;
+      System.delay(200);
+    } else {
+      if (lastX >= 0) System.drawLine(lastX, lastY, t.x, t.y, color);
+      lastX = t.x; lastY = t.y;
+    }
+  } else {
+    lastX = -1; lastY = -1;
+  }
+  System.delay(10);
+}`);
+  }
+  _seedApp(pkg, name, code){
+    const dir = '/local/apps/' + pkg;
+    this.files.set(dir, null);
+    this.files.set(dir + '/app.json', JSON.stringify({
+      name, packageName: pkg, version: '1.0.0', api: 1, author: 'KryonOS', type: 'App', category: 'Demo', description: 'Bundled demo'
+    }, null, 2));
+    this.files.set(dir + '/main.js', code);
+  }
+  exists(p){ return this.files.has(p); }
+  isDirectory(p){ return this.files.get(p) === null; }
+  isFile(p){ return this.files.has(p) && this.files.get(p) !== null; }
+  readTextFile(p){ return this.isFile(p) ? this.files.get(p) : ''; }
+  writeTextFile(p, c){ if (!p) return false; this._mkpar(p); this.files.set(p, String(c)); return true; }
+  appendTextFile(p, c){ const o = this.isFile(p) ? this.files.get(p) : ''; return this.writeTextFile(p, o + c); }
+  deleteFile(p){ return this.files.delete(p); }
+  renameFile(a, b){ if (!this.files.has(a)) return false; this._mkpar(b); const v = this.files.get(a); this.files.set(b, v); this.files.delete(a); return true; }
+  mkdir(p){ if (this.files.has(p)) return false; this._mkpar(p); this.files.set(p, null); return true; }
+  rmdir(p){ return this.files.delete(p); }
+  listDir(p){
+    if (!this.isDirectory(p)) return [];
+    const pre = p.endsWith('/') ? p : p + '/'; const out = [];
+    for (const k of this.files.keys()){
+      if (k.startsWith(pre) && k !== p){
+        const rest = k.substring(pre.length);
+        if (!rest.includes('/')) out.push(k); // Full paths like FileSystem::listDir
+      }
+    }
+    return out;
+  }
+  listDirFull(p){
+    if (!this.isDirectory(p)) return [];
+    const pre = p.endsWith('/') ? p : p + '/'; const out = [];
+    for (const k of this.files.keys()){
+      if (k.startsWith(pre) && k !== p){
+        const rest = k.substring(pre.length);
+        if (!rest.includes('/')) out.push({ name: rest, path: k, isDir: this.isDirectory(k) });
+      }
+    }
+    return out;
+  }
+  getFileSize(p){ return this.isFile(p) ? this.files.get(p).length : 0; }
+  deleteRecursive(p){
+    const pre = p.endsWith('/') ? p : p + '/';
+    for (const k of [...this.files.keys()]){
+      if (k === p || k.startsWith(pre)) this.files.delete(k);
+    }
+  }
+  _mkpar(p){
+    const parts = p.split('/').filter(Boolean);
+    let cur = '';
+    for (let i = 0; i < parts.length - 1; i++){
+      cur += '/' + parts[i];
+      if (!this.files.has(cur)) this.files.set(cur, null);
+    }
+  }
+}
+
+/* =========================================================
+   Virtual Keyboard (exact match to MyKeyboard.cpp)
+   ========================================================= */
+class OnScreenKeyboard {
+  constructor(sim){
+    this.sim = sim; this.text = ''; this.caps = false; this.active = false;
+    this.resolve = null; this.reject = null; this.promptMsg = '';
+    this.kw = 12; this.kh = 4;
+    this.keyset = [
+      [['1','!'],['2','@'],['3','#'],['4','$'],['5','%'],['6','^'],['7','&'],['8','*'],['9','('],['0',')'],['-','_'],['=','+']],
+      [['q','Q'],['w','W'],['e','E'],['r','R'],['t','T'],['y','Y'],['u','U'],['i','I'],['o','O'],['p','P'],['[','{'],[']','}']],
+      [['a','A'],['s','S'],['d','D'],['f','F'],['g','G'],['h','H'],['j','J'],['k','K'],['l','L'],[';',':'],['\'','"'],['\\','|']],
+      [['\\','|'],['z','Z'],['x','X'],['c','C'],['v','V'],['b','B'],['n','N'],['m','M'],[',','<'],['.','>'],['/','?'],[' ',' ']]
+    ];
+  }
+  show(promptMsg, initial){
+    this.sim.touch.touched = false;
+    this.sim.touch.justPressed = false;
+    this.text = initial || ''; this.caps = false; this.active = true;
+    this.promptMsg = promptMsg || 'Input';
+    this.draw();
+    return new Promise((res, rej) => {
+      this.resolve = res; this.reject = rej;
+    });
+  }
+  draw(){
+    const d = this.sim.disp;
+    d.fillScreen(TFT_BLACK);
+    d.setTextDatum(TL_DATUM);
+    d.setTextColor(TFT_GREEN, TFT_BLACK);
+    d.drawString(String(this.promptMsg).substring(0, 24), 5, 10, 2);
+
+    // Text input box
+    d.drawRect(5, 30, 230, 30, TFT_GREEN);
+    d.setTextColor(TFT_WHITE, TFT_BLACK);
+    const disp = this.text.length > 18 ? this.text.substring(this.text.length - 18) : this.text;
+    d.drawString(disp + '_', 10, 38, 2);
+
+    // Top action row
+    const btnW = 240 / 5;
+    const btns = ['OK', this.caps ? 'abc' : 'ABC', 'DEL', 'SPACE', 'ESC'];
+    d.setTextDatum(MC_DATUM);
+    for (let i = 0; i < 5; i++){
+      d.drawRect(i * btnW, 70, btnW, 30, TFT_GREEN);
+      d.setTextColor(TFT_WHITE, TFT_BLACK);
+      d.drawString(btns[i], i * btnW + btnW / 2, 85, 2);
+    }
+
+    // Keys grid
+    const keyW = 240 / this.kw;
+    const keyH = (320 - 110) / this.kh;
+    for (let y = 0; y < this.kh; y++){
+      for (let x = 0; x < this.kw; x++){
+        const px = x * keyW;
+        const py = 110 + y * keyH;
+        d.drawRect(px, py, keyW, keyH, TFT_DARKGREY);
+        const c = this.caps ? this.keyset[y][x][1] : this.keyset[y][x][0];
+        d.setTextColor(TFT_WHITE, TFT_BLACK);
+        d.drawString(c, px + keyW / 2, py + keyH / 2, 2);
+      }
+    }
+  }
+  handleTouch(x, y){
+    if (y >= 70 && y <= 100){
+      const btnW = 240 / 5;
+      const idx = Math.floor(x / btnW);
+      if (idx === 0) this.finish(this.text);
+      else if (idx === 1) { this.caps = !this.caps; this.draw(); }
+      else if (idx === 2) { if (this.text.length > 0) this.text = this.text.slice(0, -1); this.draw(); }
+      else if (idx === 3) { this.text += ' '; this.draw(); }
+      else this.finish('');
+      return;
+    }
+    if (y >= 110){
+      const keyW = 240 / this.kw;
+      const keyH = (320 - 110) / this.kh;
+      const kx = Math.floor(x / keyW);
+      const ky = Math.floor((y - 110) / keyH);
+      if (kx >= 0 && kx < this.kw && ky >= 0 && ky < this.kh){
+        const c = this.caps ? this.keyset[ky][kx][1] : this.keyset[ky][kx][0];
+        this.text += c; this.draw();
+      }
+    }
+  }
+  finish(val){
+    if (!this.active) return;
+    this.active = false;
+    const r = this.resolve;
+    this.resolve = null; this.reject = null;
+    if (r) r(val);
+  }
+  cancel(){
+    if (!this.active) return;
+    this.active = false;
+    const r = this.reject;
+    this.resolve = null; this.reject = null;
+    if (r) r(Object.assign(new Error('OS_EXIT'), { code: 'OS_EXIT' }));
+  }
+}
+
+/* =========================================================
+   System API (JSBindings.cpp parity)
+   ========================================================= */
+function buildSystemAPI(sim){
+  const disp = sim.disp, vfs = sim.vfs;
+  const startTime = Date.now();
+  const vpins = {};
+
+  return {
+    gpio: {
+      OUTPUT: 1, INPUT: 0, INPUT_PULLUP: 2, HIGH: 1, LOW: 0,
+      pinMode: (p) => { vpins[p] = vpins[p] || {on:false}; },
+      digitalWrite: (p, v) => { vpins[p] = vpins[p] || {on:false}; vpins[p].on = !!v; },
+      digitalRead: (p) => (vpins[p] && vpins[p].on) ? 1 : 0,
+      analogRead: () => Math.floor(Math.random() * 4096),
+      analogWrite: (p, v) => { vpins[p] = vpins[p] || {on:false}; vpins[p].on = v > 127; },
+      pulseIn: () => Math.floor(Math.random() * 1000)
+    },
+    fillScreen: (c) => {
+      disp.fillScreen(c);
+      if (sim.state === STATE_RUN_APP && !sim.keyboard.active) {
+        disp.fillRoundRect(200, 0, 40, 30, 5, TFT_RED);
+        disp.setTextColor(TFT_WHITE, TFT_RED);
+        disp.setTextDatum(MC_DATUM);
+        disp.drawString("X", 220, 15, 2);
+      }
+    },
+    fillRect: (x,y,w,h,c) => disp.fillRect(x,y,w,h,c),
+    drawRect: (x,y,w,h,c) => disp.drawRect(x,y,w,h,c),
+    drawLine: (a,b,c,d,e) => disp.drawLine(a,b,c,d,e),
+    drawPixel: (x,y,c) => disp.drawPixel(x,y,c),
+    drawCircle: (x,y,r,c) => disp.drawCircle(x,y,r,c),
+    fillCircle: (x,y,r,c) => disp.fillCircle(x,y,r,c),
+    drawTriangle: (...a) => disp.drawTriangle(...a),
+    fillTriangle: (...a) => disp.fillTriangle(...a),
+    drawRoundRect: (...a) => disp.drawRoundRect(...a),
+    fillRoundRect: (...a) => disp.fillRoundRect(...a),
+    drawFastVLine: (...a) => disp.drawFastVLine(...a),
+    drawFastHLine: (...a) => disp.drawFastHLine(...a),
+    drawBMP: (path, x, y) => {
+      disp.fillRect(x, y, 32, 32, TFT_DARKGREY);
+      disp.drawRect(x, y, 32, 32, TFT_WHITE);
+      return true;
+    },
+    drawString: (s, x, y, f=2) => disp.drawString(s, x, y, f),
+    setTextColor: (f, b) => disp.setTextColor(f, b),
+    setTextSize: (s) => disp.setTextSize(s),
+    createSprite: (w, h) => {
+      const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+      const spr = new TFTDisplay(cv); spr.W = w; spr.H = h;
+      disp.sprite = spr; disp.spriteBound = false;
+      return true;
+    },
+    deleteSprite: () => { disp.sprite = null; disp.spriteBound = false; },
+    pushSprite: (x, y) => { if (disp.sprite) disp.ctx.drawImage(disp.sprite.canvas, x, y); },
+    bindSprite: (e) => { disp.spriteBound = !!e && !!disp.sprite; },
+    color: (r, g, b) => disp.color(r, g, b),
+    screenWidth: () => disp.W,
+    screenHeight: () => disp.H,
+
+    getTouch: () => {
+      if (sim.exitRequested) throw Object.assign(new Error('OS_EXIT'), { code: 'OS_EXIT' });
+      if (sim.keyboard.active) return { x: 0, y: 0, touched: false };
+      const t = sim.touch;
+      if ((t.touched || t.justPressed) && t.x >= 200 && t.y <= 40) {
+        throw Object.assign(new Error('OS_EXIT'), { code: 'OS_EXIT' });
+      }
+      const wasTouched = t.touched || t.justPressed;
+      t.justPressed = false;
+      return { x: t.x, y: t.y, touched: wasTouched };
+    },
+
+    millis: () => Date.now() - startTime,
+    micros: () => (Date.now() - startTime) * 1000,
+    delay: (ms) => new Promise((res, rej) => {
+      const cap = Math.min(Math.max(0, ms|0), 30000);
+      const start = Date.now();
+      const tick = () => {
+        if (sim.exitRequested){ rej(Object.assign(new Error('OS_EXIT'), { code: 'OS_EXIT' })); return; }
+        if (Date.now() - start >= cap){ res(); return; }
+        setTimeout(tick, 8);
+      };
+      tick();
+    }),
+    delayMicroseconds: (us) => new Promise((res, rej) => {
+      const ms = Math.max(0, us / 1000);
+      const cap = Math.min(ms, 30000);
+      const start = Date.now();
+      const tick = () => {
+        if (sim.exitRequested){ rej(Object.assign(new Error('OS_EXIT'), { code: 'OS_EXIT' })); return; }
+        if (Date.now() - start >= cap){ res(); return; }
+        setTimeout(tick, 4);
+      };
+      tick();
+    }),
+    print: (m) => log(String(m)),
+    getTemperature: () => 42 + Math.random() * 6,
+    hasTemperatureSensor: () => true,
+    getInfo: () => ({
+      totalRAM: 327680,
+      freeRAM: 180000 + Math.floor(Math.random() * 10000),
+      minFreeRAM: 130000,
+      maxAllocRAM: 110000,
+      cpuFreqMHz: 240,
+      chipModel: 'ESP32-D0WDQ6',
+      chipCores: 2,
+      chipRevision: 1,
+      flashSize: 4 * 1024 * 1024,
+      uptimeMs: Date.now() - startTime
+    }),
+    restart: () => { log('System.restart() called', 'warn'); setTimeout(() => location.reload(), 400); },
+    getTime: () => {
+      const d = new Date();
+      return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    },
+    getSeconds: () => new Date().getSeconds(),
+    getDate: () => {
+      const d = new Date();
+      return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+    },
+    getYear: () => new Date().getFullYear(),
+    getMonth: () => new Date().getMonth() + 1,
+    getDay: () => new Date().getDate(),
+    getTimezone: () => sim.timezone,
+    getOSVersion: () => KRYONOS_VERSION,
+    getAPILevel: () => KRYONOS_API_LEVEL,
+    getIPAddress: () => sim.wifiConnected ? '192.168.4.1' : '',
+    isWiFiActive: () => sim.wifiConnected,
+    prompt: (msg, init) => sim.keyboard.show(msg, init)
+  };
+}
+
+function buildFSAPI(vfs){
+  return {
+    readTextFile: (p) => vfs.exists(p) ? vfs.readTextFile(p) : null,
+    writeTextFile: (p, c) => vfs.writeTextFile(p, c),
+    appendTextFile: (p, c) => vfs.appendTextFile(p, c),
+    deleteFile: (p) => vfs.deleteFile(p),
+    renameFile: (a, b) => vfs.renameFile(a, b),
+    exists: (p) => vfs.exists(p),
+    listDir: (p) => vfs.listDir(p),
+    mkdir: (p) => vfs.mkdir(p),
+    rmdir: (p) => vfs.rmdir(p),
+    isDirectory: (p) => vfs.isDirectory(p),
+    isFile: (p) => vfs.isFile(p),
+    getFileSize: (p) => vfs.getFileSize(p),
+    getTotalSpace: (d) => d.startsWith('/sd') ? 16 * 1024 * 1024 : 4 * 1024 * 1024,
+    getUsedSpace: (d) => d.startsWith('/sd') ? 1.2 * 1024 * 1024 : 512 * 1024,
+    getFreeSpace: (d) => d.startsWith('/sd') ? 14.8 * 1024 * 1024 : 3.5 * 1024 * 1024,
+    getFileMD5: (p) => 'd41d8cd98f00b204e9800998ecf8427e',
+    mountSD: () => true,
+    unmountSD: () => {}
+  };
+}
+
+/* =========================================================
+   Launcher Screen (LauncherUI.cpp parity)
+   ========================================================= */
+class LauncherUI {
+  constructor(sim){
+    this.sim = sim; this.selectedIndex = 1; this.scrollOffset = 0;
+    this.apps = []; this.scanApps();
+  }
+  scanApps(){
+    this.apps = [];
+    for (const d of ['/local/apps', '/sd/apps']){
+      if (!this.sim.vfs.isDirectory(d)) continue;
+      for (const e of this.sim.vfs.listDirFull(d)){
+        if (e.isDir){
+          const jp = e.path + '/app.json';
+          if (this.sim.vfs.exists(jp)){
+            try {
+              const o = JSON.parse(this.sim.vfs.readTextFile(jp));
+              const n = o.name || e.name;
+              if (!this.apps.find(a => a.name === n)) this.apps.push({ name: n, path: e.path, isFolder: true });
+            } catch(err){}
+          }
+        } else if (e.name.endsWith('.js')){
+          if (!this.apps.find(a => a.name === e.name)) this.apps.push({ name: e.name, path: e.path, isFolder: false });
+        }
+      }
+    }
+  }
+  total(){ return this.apps.length + 6; }
+  draw(){
+    const d = this.sim.disp;
+    d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
+    d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
+    d.drawRoundRect(6, 6, 228, 30, 5, TFT_GREEN);
+    d.setTextColor(TFT_GREEN, TFT_BLACK);
+    d.setTextDatum(MC_DATUM);
+    d.drawString('KryonOS Home', 120, 21, 2);
+
+    d.fillRect(10, 45, 220, 230, TFT_BLACK);
+    const total = this.total(), pp = 7;
+
+    for (let i = 0; i < pp; i++){
+      const idx = this.scrollOffset + i;
+      if (idx >= total) break;
+      const y = 45 + i * 30;
+      let name = '', isHdr = false;
+
+      if (idx === 0) { name = '[ SYSTEM ]'; isHdr = true; }
+      else if (idx === 1) name = 'App Store';
+      else if (idx === 2) name = 'App Installer';
+      else if (idx === 3) name = 'Settings';
+      else if (idx === 4) name = 'Help Center';
+      else if (idx === 5) { name = '[ APPS ]'; isHdr = true; }
+      else name = this.apps[idx - 6].name;
+
+      if (isHdr){
+        d.setTextColor(TFT_DARKGREY, TFT_BLACK);
+        d.setTextDatum(ML_DATUM);
+        d.drawString(name, 15, y + 12, 2);
+      } else if (idx === this.selectedIndex){
+        d.fillRect(10, y, 220, 25, TFT_WHITE);
+        d.setTextColor(TFT_BLACK, TFT_WHITE);
+        d.setTextDatum(ML_DATUM);
+        d.drawString('> ' + name, 15, y + 12, 2);
+      } else {
+        d.setTextColor(TFT_WHITE, TFT_BLACK);
+        d.setTextDatum(ML_DATUM);
+        d.drawString('  ' + name, 15, y + 12, 2);
+      }
+    }
+
+    // Scrollbar
+    if (total > pp){
+      const sbH = 230;
+      const th = Math.max(20, Math.floor((sbH * pp) / total));
+      const maxTY = sbH - th;
+      const ty = 45 + Math.floor((this.scrollOffset * maxTY) / (total - pp));
+      d.fillRect(232, 45, 3, sbH, TFT_DARKGREY);
+      d.fillRect(232, ty, 3, th, TFT_WHITE);
+    }
+
+    // Footer
+    d.drawRoundRect(5, 285, 230, 30, 5, TFT_WHITE);
+    d.setTextColor(TFT_WHITE, TFT_BLACK);
+    d.setTextDatum(MC_DATUM);
+    d.drawString('UP', 30, 300, 2);  d.drawString('|', 60, 300, 2);
+    d.drawString('SEL', 120, 300, 2); d.drawString('|', 180, 300, 2);
+    d.drawString('DN', 210, 300, 2);
+  }
+  handleTouch(x, y){
+    // Quick jump to installer if pressing header
+    if (y < 40){ this.sim.setState(STATE_INSTALLER); return; }
+
+    const total = this.total();
+    if (y >= 45 && y <= 270){
+      const idx = this.scrollOffset + Math.floor((y - 45) / 30);
+      if (idx < total && idx !== 0 && idx !== 5){
+        this.selectedIndex = idx;
+        this.draw();
+        this.execute();
+      }
+      return;
+    }
+
+    if (y >= 285 && y <= 315){
+      if (x < 60){ // UP
+        if (this.selectedIndex > 1){
+          this.selectedIndex--;
+          if (this.selectedIndex === 5) this.selectedIndex--;
+          if (this.selectedIndex < this.scrollOffset) this.scrollOffset = this.selectedIndex;
+          if (this.selectedIndex === 1) this.scrollOffset = 0;
+          this.draw();
+        }
+      } else if (x > 60 && x < 180){ // SEL
+        this.execute();
+      } else if (x > 180){ // DN
+        if (this.selectedIndex < total - 1){
+          let next = this.selectedIndex + 1;
+          if (next === 5) next++;
+          if (next < total){
+            this.selectedIndex = next;
+            if (this.selectedIndex >= this.scrollOffset + 7) this.scrollOffset = this.selectedIndex - 6;
+            this.draw();
+          }
+        }
+      }
+    }
+  }
+  execute(){
+    const s = this.selectedIndex;
+    if (s === 1) this.sim.setState(STATE_APP_STORE);
+    else if (s === 2) this.sim.setState(STATE_INSTALLER);
+    else if (s === 3) this.sim.setState(STATE_SETTINGS);
+    else if (s === 4) this.sim.setState(STATE_HELP_CENTER);
+    else if (s > 5 && this.apps[s - 6]) this.sim.launchApp(this.apps[s - 6]);
+  }
+}
+
+/* =========================================================
+   Simulator Core State Manager
+   ========================================================= */
+class Simulator {
+  constructor(){
+    this.canvas = document.getElementById('screen');
+    this.disp = new TFTDisplay(this.canvas);
+    this.vfs = new VirtualFS();
+    this.keyboard = new OnScreenKeyboard(this);
+    this.touch = { x: 0, y: 0, touched: false, justPressed: false };
+    this.exitRequested = false;
+    this.system = buildSystemAPI(this);
+    this.fsAPI = buildFSAPI(this.vfs);
+
+    this.wifiConnected = !this.vfs.exists('/local/nowifi.txt');
+    this.timezone = 'UTC0';
+    this.state = STATE_LAUNCHER;
+
+    this.launcher = new LauncherUI(this);
+    this._bindInput();
+    this._bindUI();
+    this.setState(STATE_LAUNCHER);
+
+    // Precise FPS Counter
+    let frames = 0, lastT = performance.now();
+    const countFrame = () => { frames++; requestAnimationFrame(countFrame); };
+    requestAnimationFrame(countFrame);
+    setInterval(() => {
+      const now = performance.now();
+      document.getElementById('fps-label').textContent = Math.round(frames * 1000 / (now - lastT)) + ' fps';
+      frames = 0; lastT = now;
+    }, 1000);
+  }
+  setState(s){
+    this.state = s;
+    const labels = {
+      [STATE_LAUNCHER]: 'LAUNCHER',
+      [STATE_SETTINGS]: 'SETTINGS',
+      [STATE_RUN_APP]: 'RUN_APP',
+      [STATE_INSTALLER]: 'INSTALLER',
+      [STATE_APP_STORE]: 'APP_STORE',
+      [STATE_HELP_CENTER]: 'HELP_CENTER'
+    };
+    document.getElementById('state-label').textContent = labels[s] || ('STATE_' + s);
+    if (s === STATE_RUN_APP) return;
+    this.disp.fillScreen(TFT_BLACK);
+    if (s === STATE_LAUNCHER) this.launcher.draw();
+    else if (s === STATE_SETTINGS) this._drawSettings();
+    else if (s === STATE_INSTALLER) this._drawInstaller();
+    else if (s === STATE_APP_STORE) this._drawAppStore();
+    else if (s === STATE_HELP_CENTER) this._drawHelpCenter();
+  }
+  _bindInput(){
+    const cvs = this.canvas;
+    const getXY = (cx, cy) => {
+      const r = cvs.getBoundingClientRect();
+      const x = Math.floor((cx - r.left) * cvs.width / r.width);
+      const y = Math.floor((cy - r.top) * cvs.height / r.height);
+      return { x: Math.max(0, Math.min(cvs.width - 1, x)), y: Math.max(0, Math.min(cvs.height - 1, y)) };
+    };
+    const press = (cx, cy) => {
+      const p = getXY(cx, cy);
+      this._handlePress(p.x, p.y);
+    };
+    const move = (cx, cy) => {
+      if (!this.touch.touched || this.state !== STATE_RUN_APP) return;
+      const p = getXY(cx, cy);
+      this.touch.x = p.x; this.touch.y = p.y;
+    };
+    const release = () => {
+      if (this.state === STATE_RUN_APP) this.touch.touched = false;
+    };
+
+    cvs.addEventListener('mousedown', e => { e.preventDefault(); press(e.clientX, e.clientY); });
+    window.addEventListener('mousemove', e => { if (e.buttons === 1) move(e.clientX, e.clientY); });
+    window.addEventListener('mouseup', release);
+
+    cvs.addEventListener('touchstart', e => { e.preventDefault(); const t = e.changedTouches[0]; press(t.clientX, t.clientY); }, {passive:false});
+    cvs.addEventListener('touchmove', e => { e.preventDefault(); const t = e.changedTouches[0]; move(t.clientX, t.clientY); }, {passive:false});
+    cvs.addEventListener('touchend', e => { e.preventDefault(); release(); }, {passive:false});
+
+    document.querySelectorAll('.ctrl-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (this.state === STATE_LAUNCHER) {
+          if (btn.dataset.key === 'up') this.launcher.handleTouch(30, 300);
+          else if (btn.dataset.key === 'sel') this.launcher.handleTouch(120, 300);
+          else if (btn.dataset.key === 'dn') this.launcher.handleTouch(210, 300);
+        }
+      });
+    });
+  }
+  _handlePress(x, y){
+    if (this.state === STATE_RUN_APP && x >= 200 && y <= 40){
+      this.exitRequested = true;
+      if (this.keyboard.active) this.keyboard.cancel();
+      return;
+    }
+    if (this.keyboard.active){
+      this.keyboard.handleTouch(x, y);
+      return;
+    }
+    if (this.state === STATE_RUN_APP){
+      this.touch.x = x; this.touch.y = y;
+      this.touch.touched = true;
+      this.touch.justPressed = true;
+      return;
+    }
+    if (this.state === STATE_LAUNCHER) this.launcher.handleTouch(x, y);
+    else if (this.state === STATE_SETTINGS && y >= 285) this.setState(STATE_LAUNCHER);
+    else if (this.state === STATE_INSTALLER && y >= 285 && x < 60) this.setState(STATE_LAUNCHER);
+    else if (this.state === STATE_APP_STORE && y >= 285 && x < 70) this.setState(STATE_LAUNCHER);
+    else if (this.state === STATE_HELP_CENTER && y >= 285) this.setState(STATE_LAUNCHER);
+  }
+  async launchApp(app, codeOverride){
+    let code = (codeOverride != null) ? codeOverride : this.vfs.readTextFile(app.isFolder ? app.path + '/main.js' : app.path);
+    if (!code){ log('Error: main.js not found', 'err'); return; }
+
+    this.exitRequested = false;
+    this.touch = { x: 0, y: 0, touched: false, justPressed: false };
+    this.state = STATE_RUN_APP;
+    document.getElementById('state-label').textContent = 'RUN_APP';
+
+    this.disp.fillScreen(TFT_BLACK);
+    // Draw exit button as done in LauncherUI.cpp
+    this.disp.fillRoundRect(200, 0, 40, 30, 5, TFT_RED);
+    this.disp.setTextColor(TFT_WHITE, TFT_RED);
+    this.disp.setTextDatum(MC_DATUM);
+    this.disp.drawString("X", 220, 15, 2);
+
+    // Transform synchronous delay & prompt calls to await-compatible promises
+    let transformed = code
+      .replace(/(?<!await\s+)\bSystem\.delay\(/g, 'await System.delay(')
+      .replace(/(?<!await\s+)\bSystem\.delayMicroseconds\(/g, 'await System.delayMicroseconds(')
+      .replace(/(?<!await\s+)\bSystem\.prompt\(/g, 'await System.prompt(');
+
+    let fn;
+    try {
+      fn = new Function('System', 'FS', 'BLACK', 'WHITE', 'RED', 'GREEN', 'BLUE', 'YELLOW', 'CYAN', 'MAGENTA', 'ORANGE', 'DARKGREY',
+        `"use strict"; return (async () => { ${transformed} })();`);
+    } catch(err) {
+      await this._showError(err.message);
+      return;
+    }
+
+    log('▶ Running: ' + app.name, 'info');
+    let forceExited = false;
+    try {
+      await fn(this.system, this.fsAPI,
+        TFT_BLACK, TFT_WHITE, TFT_RED, TFT_GREEN, TFT_BLUE, TFT_YELLOW,
+        TFT_CYAN, TFT_MAGENTA, TFT_ORANGE, TFT_DARKGREY);
+      log('■ App finished');
+    } catch(e) {
+      if (e.message === 'OS_EXIT' || e.code === 'OS_EXIT'){
+        log('■ App cleanly exited via X');
+        forceExited = true;
+      } else {
+        log('✖ App error: ' + e.message, 'err');
+        await this._showError(e.message);
+        return;
+      }
+    }
+
+    // If app terminated on its own, hold the screen with the red X visible until tapped
+    if (!forceExited){
+      this.disp.fillRoundRect(200, 0, 40, 30, 5, TFT_RED);
+      this.disp.setTextColor(TFT_WHITE, TFT_RED);
+      this.disp.setTextDatum(MC_DATUM);
+      this.disp.drawString("X", 220, 15, 2);
+      await new Promise(res => {
+        const check = setInterval(() => {
+          if (this.exitRequested){ clearInterval(check); res(); }
+        }, 30);
+      });
+    }
+
+    this.exitRequested = false;
+    this.setState(STATE_LAUNCHER);
+  }
+  _showError(msg){
+    this.state = STATE_RUN_APP;
+    document.getElementById('state-label').textContent = 'ERROR';
+    this.disp.fillScreen(TFT_RED);
+    this.disp.setTextColor(TFT_WHITE, TFT_RED);
+    this.disp.setTextDatum(TL_DATUM);
+    this.disp.drawString('JS EXCEPTION!', 10, 10, 4);
+
+    const lines = String(msg).split('\n');
+    let y = 60;
+    for (let i = 0; i < lines.length && i < 8; i++){
+      this.disp.drawString(lines[i].substring(0, 38), 10, y, 2);
+      y += 20;
+    }
+
+    this.disp.fillRoundRect(200, 0, 40, 30, 5, TFT_WHITE);
+    this.disp.setTextColor(TFT_RED, TFT_WHITE);
+    this.disp.setTextDatum(MC_DATUM);
+    this.disp.drawString("X", 220, 15, 2);
+
+    return new Promise(res => {
+      const check = setInterval(() => {
+        if (this.exitRequested){ clearInterval(check); res(); }
+      }, 40);
+    }).then(() => this.setState(STATE_LAUNCHER));
+  }
+  _drawSettings(){
+    const d = this.disp;
+    d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
+    d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
+    d.drawRoundRect(6, 6, 228, 30, 5, TFT_GREEN);
+    d.setTextColor(TFT_GREEN, TFT_BLACK);
+    d.setTextDatum(MC_DATUM);
+    d.drawString('Settings Menu', 120, 21, 2);
+
+    const items = [
+      { l: 'WiFi Options', c: TFT_BLUE, f: TFT_WHITE },
+      { l: 'Touch Calibrator', c: TFT_ORANGE, f: TFT_WHITE },
+      { l: 'Manage Apps', c: TFT_PURPLE, f: TFT_WHITE },
+      { l: 'Time & Region', c: TFT_CYAN, f: TFT_BLACK },
+      { l: 'About Device', c: TFT_DARKGREY, f: TFT_WHITE },
+      { l: 'System Updates', c: TFT_RED, f: TFT_WHITE }
+    ];
+    let y = 40;
+    items.forEach(it => {
+      d.fillRoundRect(20, y, 200, 35, 5, it.c);
+      d.setTextColor(it.f, it.c);
+      d.drawString(it.l, 120, y + 17, 2);
+      y += 40;
+    });
+
+    d.drawRoundRect(5, 285, 230, 30, 5, TFT_WHITE);
+    d.setTextColor(TFT_WHITE, TFT_BLACK);
+    d.drawString('EXIT', 120, 300, 2);
+  }
+  _drawInstaller(){
+    const d = this.disp;
+    d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
+    d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
+    d.drawRoundRect(6, 6, 228, 30, 5, TFT_GREEN);
+    d.setTextColor(TFT_GREEN, TFT_BLACK);
+    d.setTextDatum(MC_DATUM);
+    d.drawString('App Installer', 120, 21, 2);
+
+    d.setTextDatum(TL_DATUM);
+    d.setTextColor(TFT_WHITE, TFT_BLACK);
+    d.drawString('SD Card (/sd/apps)', 15, 60, 2);
+    d.drawString('Internal (/local/apps)', 15, 95, 2);
+
+    d.setTextDatum(MC_DATUM);
+    d.drawRoundRect(5, 285, 230, 30, 5, TFT_WHITE);
+    d.drawString('ESC', 30, 300, 2);  d.drawString('|', 60, 300, 2);
+    d.drawString('UP', 90, 300, 2);   d.drawString('|', 120, 300, 2);
+    d.drawString('SEL', 150, 300, 2);  d.drawString('|', 180, 300, 2);
+    d.drawString('DN', 210, 300, 2);
+  }
+  _drawAppStore(){
+    const d = this.disp;
+    d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
+    d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
+    d.drawRoundRect(6, 6, 228, 30, 5, TFT_GREEN);
+    d.setTextColor(TFT_GREEN, TFT_BLACK);
+    d.setTextDatum(MC_DATUM);
+    d.drawString('App Store', 120, 21, 2);
+
+    d.setTextDatum(TL_DATUM);
+    d.setTextColor(TFT_WHITE, TFT_BLACK);
+    d.drawString('> [ Check For Apps Update ]', 15, 55, 2);
+    d.drawString('  Demos', 15, 85, 2);
+    d.drawString('  Games', 15, 115, 2);
+    d.drawString('  Utilities', 15, 145, 2);
+
+    d.setTextDatum(MC_DATUM);
+    d.drawRoundRect(5, 285, 230, 30, 5, TFT_WHITE);
+    d.drawString('BACK', 35, 300, 2);
+  }
+  _drawHelpCenter(){
+    const d = this.disp;
+    d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
+    d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
+    d.drawRoundRect(6, 6, 228, 30, 5, TFT_GREEN);
+    d.setTextColor(TFT_GREEN, TFT_BLACK);
+    d.setTextDatum(MC_DATUM);
+    d.drawString('Help Center', 120, 21, 2);
+
+    d.drawRoundRect(20, 80, 200, 40, 5, TFT_WHITE);
+    d.setTextColor(TFT_WHITE, TFT_BLACK);
+    d.drawString('Offline Help Center', 120, 100, 2);
+
+    d.drawRoundRect(20, 140, 200, 40, 5, TFT_WHITE);
+    d.drawString('Online Help Center', 120, 160, 2);
+
+    d.drawRoundRect(5, 285, 230, 30, 5, TFT_WHITE);
+    d.drawString('BACK', 120, 300, 2);
+  }
+  _bindUI(){
+    document.getElementById('btn-install').addEventListener('click', () => {
+      const name = document.getElementById('app-name').value.trim() || 'My App';
+      let pkg = document.getElementById('app-pkg').value.trim() || 'com.demo.app';
+      pkg = pkg.toLowerCase().replace(/\s+/g, '');
+      if (!pkg.includes('.')) pkg = 'com.demo.' + pkg.replace(/[^a-z0-9]/g, '');
+
+      const code = document.getElementById('app-code').value;
+      const dir = '/local/apps/' + pkg;
+      this.vfs.mkdir(dir);
+      this.vfs.writeTextFile(dir + '/app.json', JSON.stringify({
+        name, packageName: pkg, version: '1.0.0', api: 1, author: 'You', type: 'App', category: 'User', description: 'Installed via editor'
+      }, null, 2));
+      this.vfs.writeTextFile(dir + '/main.js', code);
+      this.launcher.scanApps();
+      this.launcher.draw();
+      log('💾 Installed: ' + name + ' (' + pkg + ')', 'ok');
+    });
+
+    document.getElementById('btn-run').addEventListener('click', () => {
+      const name = document.getElementById('app-name').value.trim() || 'My App';
+      const code = document.getElementById('app-code').value;
+      this.launchApp({ name, path: '__tmp__', isFolder: true }, code);
+    });
+
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      if (!confirm('Reset LittleFS and SD card? Custom apps will be erased.')) return;
+      this.vfs.reset();
+      this.launcher.scanApps();
+      this.setState(STATE_LAUNCHER);
+      log('⟲ File systems reset to factory state', 'warn');
+    });
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  window.KryonOS = new Simulator();
+  log('KryonOS Simulator v2.2 initialized (100% Firmware Matched)', 'ok');
+});
+</script>
+</body>
+  </html>
