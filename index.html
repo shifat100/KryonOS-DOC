@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KryonOS Simulator v2.4 (IndexedDB Persistent Storage)</title>
+<title>KryonOS Simulator v2.5 (Overlap Fixed & Full AppStore Nav)</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:radial-gradient(ellipse at top,#1e1e3a 0%,#0a0a15 100%);color:#e0e0e8;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;min-height:100vh;display:flex;justify-content:center;align-items:flex-start;padding:24px;gap:24px;flex-wrap:wrap}
@@ -139,15 +139,15 @@ function log(msg, cls){
 }
 
 /* =========================================================
-   IndexedDB Virtual File System (IDB + Reactive Cache)
+   IndexedDB Virtual File System
    ========================================================= */
 class IndexedDB_VFS {
   constructor(sim){
     this.sim = sim;
-    this.dbName = 'KryonOS_Storage_v2';
+    this.dbName = 'KryonOS_Storage_v3';
     this.storeName = 'files';
     this.db = null;
-    this.cache = new Map(); // Synchronous cache for Duktape runtime
+    this.cache = new Map();
     this.channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('kryon_vfs_sync') : null;
 
     if (this.channel) {
@@ -182,7 +182,7 @@ class IndexedDB_VFS {
         resolve();
       };
       req.onerror = (e) => {
-        log('IndexedDB failed to open: ' + e.target.error, 'err');
+        log('IndexedDB error: ' + e.target.error, 'err');
         reject(e.target.error);
       };
     });
@@ -311,7 +311,6 @@ while (true) {
     }
   }
 
-  // --- KryonOS C++ FileSystem API Parity ---
   exists(p){ return this.cache.has(p); }
   isDirectory(p){ const it = this.cache.get(p); return it ? it.isDir : false; }
   isFile(p){ const it = this.cache.get(p); return it ? !it.isDir : false; }
@@ -730,7 +729,7 @@ function buildFSAPI(vfs){
 }
 
 /* =========================================================
-   UI Controllers (Responsive & State-Linked)
+   UI Controllers (Clean Slate on Every Draw)
    ========================================================= */
 
 // --- 1. Launcher UI ---
@@ -762,6 +761,7 @@ class LauncherUI {
   total(){ return this.apps.length + 6; }
   draw(){
     const d = this.sim.disp;
+    d.fillScreen(TFT_BLACK); // Clean Slate
     d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
     d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
     d.drawRoundRect(6, 6, 228, 30, 5, TFT_GREEN);
@@ -898,6 +898,7 @@ class InstallerUI {
   }
   draw(){
     const d = this.sim.disp;
+    d.fillScreen(TFT_BLACK); // Clean Slate
     if (this.dialog) { this._drawDialog(); return; }
     if (this.currentPath === '/help/') { this._drawHelp(); return; }
 
@@ -1121,6 +1122,7 @@ class SettingsUI {
   constructor(sim){ this.sim = sim; }
   draw(){
     const d = this.sim.disp;
+    d.fillScreen(TFT_BLACK); // Clean Slate
     d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
     d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
     d.drawRoundRect(6, 6, 228, 30, 5, TFT_GREEN);
@@ -1167,6 +1169,7 @@ class WiFiSettingsUI {
   constructor(sim){ this.sim = sim; }
   draw(){
     const d = this.sim.disp;
+    d.fillScreen(TFT_BLACK); // Clean Slate
     d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
     d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
     d.drawRoundRect(6, 6, 228, 30, 5, TFT_GREEN);
@@ -1224,6 +1227,7 @@ class WebServerUI {
   constructor(sim){ this.sim = sim; }
   draw(){
     const d = this.sim.disp;
+    d.fillScreen(TFT_BLACK); // Clean Slate
     d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
     d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
     d.drawRoundRect(6, 6, 228, 30, 5, TFT_CYAN);
@@ -1274,6 +1278,7 @@ class ManageAppsUI {
   }
   draw(){
     const d = this.sim.disp;
+    d.fillScreen(TFT_BLACK); // Clean Slate
     d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
     d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
     d.drawRoundRect(6, 6, 228, 30, 5, TFT_GREEN);
@@ -1326,7 +1331,7 @@ class ManageAppsUI {
       const a = this.apps[this.selected];
       if (y >= 110 && y <= 140){
         this.sim.vfs.deleteRecursive(a.path);
-        log('Uninstalled app from IndexedDB: ' + a.name, 'warn');
+        log('Uninstalled app: ' + a.name, 'warn');
         this.modal = false; this.refresh(); this.draw(); return;
       }
       if (y >= 150 && y <= 180){
@@ -1367,6 +1372,7 @@ class TimeSettingsUI {
   constructor(sim){ this.sim = sim; this.use24h = true; this.ntp = true; }
   draw(){
     const d = this.sim.disp;
+    d.fillScreen(TFT_BLACK); // Clean Slate
     d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
     d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
     d.drawRoundRect(6, 6, 228, 30, 5, TFT_CYAN);
@@ -1413,6 +1419,7 @@ class AboutDeviceUI {
   constructor(sim){ this.sim = sim; }
   draw(){
     const d = this.sim.disp;
+    d.fillScreen(TFT_BLACK); // Clean Slate
     d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
     d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
     d.drawRoundRect(6, 6, 228, 30, 5, TFT_GREEN);
@@ -1448,76 +1455,137 @@ class AboutDeviceUI {
   physical(k){ if (k === 'sel') this.handleTouch(120, 300); }
 }
 
-// --- 9. App Store UI ---
+// --- 9. App Store UI (Full Category & UP/DN Navigation) ---
 class AppStoreUI {
   constructor(sim){
-    this.sim = sim; this.state = 0;
+    this.sim = sim; 
+    this.state = 0; // 0=Categories, 1=Apps, 2=Info, 3=Dialog
     this.categories = ['[ Check For Apps Update ]', 'Demos', 'Games', 'Utilities'];
-    this.apps = [
-      { name: 'Calculator', author: 'KryonOS', version: '1.0.0', pkg: 'com.demo.calc' },
-      { name: 'Tetris', author: 'KryonOS', version: '1.0.0', pkg: 'com.demo.tetris' }
-    ];
-    this.selected = 0;
+    this.storeData = {
+      'Demos': [
+        { name: 'Hello Kryon', author: 'KryonOS', version: '1.0.0', pkg: 'com.demo.hello', desc: 'Welcome demo application for KryonOS.' },
+        { name: 'Drawing Pad', author: 'KryonOS', version: '1.0.0', pkg: 'com.demo.draw', desc: 'Draw with finger or mouse on screen.' },
+        { name: 'LED Blink', author: 'KryonOS', version: '1.0.0', pkg: 'com.demo.led', desc: 'Simulated GPIO toggle pin 2.' }
+      ],
+      'Games': [
+        { name: 'Tetris', author: 'RetroDev', version: '1.1.0', pkg: 'com.game.tetris', desc: 'Classic falling tetromino brick stacker.' },
+        { name: 'Snake Game', author: 'RetroDev', version: '1.0.2', pkg: 'com.game.snake', desc: 'Classic retro snake eating food dots.' },
+        { name: 'Pong Arcade', author: 'ArcadeTeam', version: '1.0.0', pkg: 'com.game.pong', desc: 'Bounce ball against paddle retro duel.' }
+      ],
+      'Utilities': [
+        { name: 'Calculator', author: 'KryonDev', version: '1.2.0', pkg: 'com.util.calc', desc: 'Touch pocket calculator for quick math.' },
+        { name: 'Notepad', author: 'KryonDev', version: '1.0.0', pkg: 'com.util.notepad', desc: 'Write and edit notes saved in storage.' },
+        { name: 'Stopwatch', author: 'KryonDev', version: '1.0.0', pkg: 'com.util.stopwatch', desc: 'Precision millisecond digital lap timer.' }
+      ]
+    };
+    this.catIndex = 0;
+    this.appIndex = 0;
+    this.scrollOffset = 0;
+    this.currentCategory = 'Demos';
+    this.dialogMsg = '';
   }
+
+  getCurrentList(){
+    if (this.state === 0) return this.categories;
+    return this.storeData[this.currentCategory] || [];
+  }
+
   draw(){
     const d = this.sim.disp;
+    d.fillScreen(TFT_BLACK); // Clean Slate (Fixes overlap!)
     d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
     d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
     d.drawRoundRect(6, 6, 228, 30, 5, TFT_GREEN);
     d.setTextColor(TFT_GREEN, TFT_BLACK);
     d.setTextDatum(MC_DATUM);
-    d.drawString(this.state === 2 ? 'App Details' : 'App Store', 120, 21, 2);
 
-    if (this.state === 0){
-      d.setTextDatum(TL_DATUM);
-      let y = 50;
-      this.categories.forEach((c, i) => {
-        d.setTextColor(i === this.selected ? TFT_GREEN : TFT_WHITE, TFT_BLACK);
-        d.drawString((i === this.selected ? '> ' : '  ') + c, 15, y, 2);
-        y += 30;
-      });
-    } else if (this.state === 1){
-      d.setTextDatum(TL_DATUM);
-      let y = 50;
-      this.apps.forEach((a, i) => {
-        d.setTextColor(i === this.selected ? TFT_GREEN : TFT_WHITE, TFT_BLACK);
-        d.drawString((i === this.selected ? '> ' : '  ') + a.name, 15, y, 2);
-        y += 30;
-      });
-    } else if (this.state === 2){
-      const a = this.apps[this.selected];
-      d.setTextDatum(TL_DATUM);
-      d.setTextColor(TFT_WHITE, TFT_BLACK);
-      d.drawString('Name: ' + a.name, 15, 60, 2);
-      d.drawString('Author: ' + a.author, 15, 85, 2);
-      d.drawString('Version: ' + a.version, 15, 110, 2);
+    let header = 'App Store';
+    if (this.state === 1) header = this.currentCategory;
+    else if (this.state === 2) header = 'App Details';
+    else if (this.state === 3) header = 'Store Message';
+    d.drawString(header, 120, 21, 2);
 
-      d.setTextDatum(MC_DATUM);
-      d.fillRoundRect(25, 220, 80, 30, 4, TFT_GREEN);
-      d.setTextColor(TFT_BLACK, TFT_GREEN);
-      d.drawString('DOWNLOAD', 65, 235, 2);
+    d.fillRect(10, 45, 220, 230, TFT_BLACK);
 
-      d.fillRoundRect(135, 220, 80, 30, 4, TFT_RED);
-      d.setTextColor(TFT_WHITE, TFT_RED);
-      d.drawString('CANCEL', 175, 235, 2);
-    }
+    if (this.state === 0 || this.state === 1){
+      const list = this.getCurrentList();
+      const selIdx = (this.state === 0) ? this.catIndex : this.appIndex;
+      const pp = 7;
 
-    if (this.state !== 2){
+      for (let i = 0; i < pp; i++){
+        const idx = this.scrollOffset + i;
+        if (idx >= list.length) break;
+        const y = 45 + i * 30;
+        const item = list[idx];
+        const label = (typeof item === 'string') ? item : item.name;
+
+        if (idx === selIdx){
+          d.fillRect(10, y, 220, 25, TFT_WHITE);
+          d.setTextColor(TFT_BLACK, TFT_WHITE);
+          d.setTextDatum(ML_DATUM);
+          d.drawString('> ' + label, 15, y + 12, 2);
+        } else {
+          d.setTextColor(TFT_WHITE, TFT_BLACK);
+          d.setTextDatum(ML_DATUM);
+          d.drawString('  ' + label, 15, y + 12, 2);
+        }
+      }
+
+      // App Store Footer with full UP/DN buttons matching C++
       d.drawRoundRect(5, 285, 230, 30, 5, TFT_WHITE);
       d.setTextColor(TFT_WHITE, TFT_BLACK);
       d.setTextDatum(MC_DATUM);
-      d.drawString('BACK', 35, 300, 2); d.drawString('|', 70, 300, 2);
-      d.drawString('SEL', 120, 300, 2);
+      d.drawString('BACK', 35, 300, 2);  d.drawString('|', 70, 300, 2);
+      d.drawString('UP', 100, 300, 2);   d.drawString('|', 130, 300, 2);
+      d.drawString('SEL', 165, 300, 2);  d.drawString('|', 200, 300, 2);
+      d.drawString('DN', 220, 300, 2);
+    } 
+    else if (this.state === 2){
+      const a = (this.storeData[this.currentCategory] || [])[this.appIndex];
+      if (!a) { this.state = 1; this.draw(); return; }
+
+      d.setTextDatum(TL_DATUM);
+      d.setTextColor(TFT_WHITE, TFT_BLACK);
+      d.drawString('Name:    ' + a.name, 15, 60, 2);
+      d.drawString('Author:  ' + a.author, 15, 85, 2);
+      d.drawString('Version: ' + a.version, 15, 110, 2);
+      d.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+      d.drawString('Desc: ' + a.desc, 15, 140, 2);
+
+      d.setTextDatum(MC_DATUM);
+      d.fillRoundRect(25, 230, 80, 30, 4, TFT_GREEN);
+      d.setTextColor(TFT_BLACK, TFT_GREEN);
+      d.drawString('INSTALL', 65, 245, 2);
+
+      d.fillRoundRect(135, 230, 80, 30, 4, TFT_RED);
+      d.setTextColor(TFT_WHITE, TFT_RED);
+      d.drawString('CANCEL', 175, 245, 2);
+    }
+    else if (this.state === 3){
+      d.fillRoundRect(10, 80, 220, 140, 6, TFT_DARKGREY);
+      d.setTextColor(TFT_WHITE, TFT_DARKGREY);
+      d.setTextDatum(MC_DATUM);
+      d.drawString(this.dialogMsg, 120, 130, 2);
+
+      d.fillRoundRect(85, 175, 70, 30, 4, TFT_BLUE);
+      d.setTextColor(TFT_WHITE, TFT_BLUE);
+      d.drawString('OK', 120, 190, 2);
     }
   }
+
   handleTouch(x, y){
+    if (this.state === 3){
+      if (x >= 85 && x <= 155 && y >= 175 && y <= 210){
+        this.state = 1; this.draw();
+      }
+      return;
+    }
+
     if (this.state === 2){
-      if (y >= 220 && y <= 250){
+      if (y >= 230 && y <= 260){
         if (x >= 25 && x <= 105){
-          const a = this.apps[this.selected];
-          this.sim.vfs._seedApp(a.pkg, a.name, 'System.fillScreen(BLACK); System.drawString("' + a.name + '", 20, 20, 2); while(true){ if(System.getTouch().touched) break; System.delay(50); }');
-          log('Installed from store to IndexedDB: ' + a.name, 'ok');
-          this.state = 0; this.draw();
+          const a = (this.storeData[this.currentCategory] || [])[this.appIndex];
+          this._installApp(a);
         } else if (x >= 135 && x <= 215){
           this.state = 1; this.draw();
         }
@@ -1525,44 +1593,160 @@ class AppStoreUI {
       return;
     }
 
-    if (y >= 285){
-      if (x < 70){
-        if (this.state === 1) { this.state = 0; this.draw(); }
-        else this.sim.setState(STATE_LAUNCHER);
-      } else {
-        if (this.state === 0) { this.state = 1; this.draw(); }
-        else if (this.state === 1) { this.state = 2; this.draw(); }
+    // List item click (y: 45..270)
+    if (y >= 45 && y <= 270){
+      const list = this.getCurrentList();
+      const clickedIdx = this.scrollOffset + Math.floor((y - 45) / 30);
+      if (clickedIdx < list.length){
+        if (this.state === 0) {
+          this.catIndex = clickedIdx;
+          this.selectCategory();
+        } else {
+          this.appIndex = clickedIdx;
+          this.state = 2;
+          this.draw();
+        }
       }
       return;
     }
 
-    if (y >= 50 && y <= 240){
-      const idx = Math.floor((y - 50) / 30);
-      if (this.state === 0 && idx < this.categories.length){
-        this.selected = idx; this.state = 1; this.draw();
-      } else if (this.state === 1 && idx < this.apps.length){
-        this.selected = idx; this.state = 2; this.draw();
+    // Footer actions (BACK, UP, SEL, DN)
+    if (y >= 285 && y <= 315){
+      if (x < 70){ // BACK
+        if (this.state === 1) { this.state = 0; this.scrollOffset = 0; this.draw(); }
+        else this.sim.setState(STATE_LAUNCHER);
+      } else if (x >= 70 && x < 130){ // UP
+        this.navUp();
+      } else if (x >= 130 && x < 200){ // SEL
+        this.navSel();
+      } else if (x >= 200){ // DN
+        this.navDown();
       }
     }
   }
-  physical(k){ if (k === 'sel') this.handleTouch(120, 300); }
+
+  navUp(){
+    const list = this.getCurrentList();
+    if (this.state === 0){
+      if (this.catIndex > 0){
+        this.catIndex--;
+        if (this.catIndex < this.scrollOffset) this.scrollOffset = this.catIndex;
+        this.draw();
+      }
+    } else if (this.state === 1){
+      if (this.appIndex > 0){
+        this.appIndex--;
+        if (this.appIndex < this.scrollOffset) this.scrollOffset = this.appIndex;
+        this.draw();
+      }
+    }
+  }
+
+  navDown(){
+    const list = this.getCurrentList();
+    if (this.state === 0){
+      if (this.catIndex < list.length - 1){
+        this.catIndex++;
+        if (this.catIndex >= this.scrollOffset + 7) this.scrollOffset = this.catIndex - 6;
+        this.draw();
+      }
+    } else if (this.state === 1){
+      if (this.appIndex < list.length - 1){
+        this.appIndex++;
+        if (this.appIndex >= this.scrollOffset + 7) this.scrollOffset = this.appIndex - 6;
+        this.draw();
+      }
+    }
+  }
+
+  navSel(){
+    if (this.state === 0) this.selectCategory();
+    else if (this.state === 1) { this.state = 2; this.draw(); }
+  }
+
+  selectCategory(){
+    const sel = this.categories[this.catIndex];
+    if (sel === '[ Check For Apps Update ]'){
+      this.dialogMsg = 'All Apps are up to date!';
+      this.state = 3;
+      this.draw();
+      return;
+    }
+    this.currentCategory = sel;
+    this.appIndex = 0;
+    this.scrollOffset = 0;
+    this.state = 1;
+    this.draw();
+  }
+
+  _installApp(a){
+    const dir = '/local/apps/' + a.pkg;
+    this.sim.vfs.mkdir(dir);
+    this.sim.vfs.writeTextFile(dir + '/app.json', JSON.stringify({
+      name: a.name, packageName: a.pkg, version: a.version, api: 1, author: a.author, type: 'App', category: this.currentCategory, description: a.desc
+    }, null, 2));
+
+    const code = `System.fillScreen(BLACK);
+System.setTextColor(GREEN);
+System.drawString("${a.name}", 15, 30, 4);
+System.setTextColor(WHITE);
+System.drawString("Version: ${a.version}", 15, 80, 2);
+System.drawString("Author: ${a.author}", 15, 105, 2);
+System.drawString("Category: ${this.currentCategory}", 15, 130, 2);
+System.setTextColor(YELLOW);
+System.drawString("Installed via App Store", 15, 170, 2);
+System.setTextColor(WHITE);
+System.drawString("Tap anywhere to exit", 15, 250, 2);
+while (true) {
+  var t = System.getTouch();
+  if (t.touched) break;
+  System.delay(50);
+}`;
+    this.sim.vfs.writeTextFile(dir + '/main.js', code);
+    log(`Installed ${a.name} into IndexedDB (/local/apps/${a.pkg})`, 'ok');
+    this.dialogMsg = `${a.name} Installed!`;
+    this.state = 3;
+    this.draw();
+  }
+
+  physical(k){
+    if (k === 'up') this.navUp();
+    else if (k === 'sel') this.navSel();
+    else if (k === 'dn') this.navDown();
+  }
 }
 
-// --- 10. Help Center UI ---
+// --- 10. Help Center UI (Overlap Completely Resolved) ---
 class HelpCenterUI {
   constructor(sim){
-    this.sim = sim; this.state = 0;
+    this.sim = sim; 
+    this.state = 0; // 0=Main, 1=Offline Categories, 2=Topics List, 5=Article Viewer
     this.categories = ['Getting Started', 'Basic Navigation', 'Connectivity', 'Troubleshooting'];
-    this.content = {
-      0: "KryonOS is a lightweight OS for ESP32. Go to Settings -> WiFi to connect.",
-      1: "Home lists installed apps. Tap an app name to run it. Tap top-right red X to exit.",
-      2: "Go to Settings -> WiFi, tap your network, enter the password, and apply.",
-      3: "If JS apps crash or run out of memory, disable WiFi from Settings to free heap."
+    this.topics = {
+      0: ['What is KryonOS', 'First setup guide', 'System vs User apps'],
+      1: ['Home screen overview', 'Opening & closing apps'],
+      2: ['How to connect WiFi'],
+      3: ['Black screen & Crash']
     };
-    this.sel = 0;
+    this.content = {
+      'What is KryonOS': 'KryonOS is a fast, lightweight operating system built specifically for ESP32. It features an onboard app store, JavaScript app execution, and persistent storage.',
+      'First setup guide': 'To get started, go to Settings -> WiFi to connect your device. Make sure storage is formatted and ready for new apps.',
+      'System vs User apps': 'System apps (Settings, Launcher) run in C++ for maximum speed. User apps run in the KryonOS JavaScript runtime.',
+      'Home screen overview': 'The Home screen lists system menus at the top and your installed user apps below. Use buttons or touch to navigate.',
+      'Opening & closing apps': 'Tap an app name to open it. To close any running user app, tap the red X button in the top right corner.',
+      'How to connect WiFi': 'Go to Settings -> WiFi. Tap an available network, enter the password with the on-screen keyboard, and tap OK.',
+      'Black screen & Crash': 'If you experience a memory crash when running heavy JS apps, turn off WiFi from Settings to free up the RAM.'
+    };
+    this.catIndex = 0;
+    this.topicIndex = 0;
+    this.scrollOffset = 0;
+    this.viewerTitle = '';
+    this.viewerContent = '';
   }
+
   draw(){
     const d = this.sim.disp;
+    d.fillScreen(TFT_BLACK); // Completely clears previous menu (No Overlap!)
     d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
     d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
     d.drawRoundRect(6, 6, 228, 30, 5, TFT_GREEN);
@@ -1570,61 +1754,157 @@ class HelpCenterUI {
     d.setTextDatum(MC_DATUM);
     d.drawString('Help Center', 120, 21, 2);
 
+    d.fillRect(10, 45, 220, 230, TFT_BLACK);
+
     if (this.state === 0){
+      // Main menu (Offline vs Online)
       d.drawRoundRect(20, 80, 200, 40, 5, TFT_WHITE);
       d.setTextColor(TFT_WHITE, TFT_BLACK);
       d.drawString('Offline Help Center', 120, 100, 2);
 
       d.drawRoundRect(20, 140, 200, 40, 5, TFT_WHITE);
       d.drawString('Online Help Center', 120, 160, 2);
-    } else if (this.state === 1){
+
+      d.drawRoundRect(5, 285, 230, 30, 5, TFT_WHITE);
+      d.drawString('BACK', 120, 300, 2);
+    } 
+    else if (this.state === 1){
+      // Categories
       d.setTextDatum(TL_DATUM);
-      let y = 60;
+      let y = 50;
       this.categories.forEach((c, i) => {
-        d.setTextColor(TFT_WHITE, TFT_BLACK);
-        d.drawString('> ' + c, 15, y, 2);
-        y += 35;
+        if (i === this.catIndex){
+          d.fillRect(10, y - 2, 220, 26, TFT_WHITE);
+          d.setTextColor(TFT_BLACK, TFT_WHITE);
+          d.drawString('> ' + c, 15, y + 2, 2);
+        } else {
+          d.setTextColor(TFT_WHITE, TFT_BLACK);
+          d.drawString('  ' + c, 15, y + 2, 2);
+        }
+        y += 32;
       });
-    } else if (this.state === 2){
+
+      d.drawRoundRect(5, 285, 230, 30, 5, TFT_WHITE);
+      d.setTextColor(TFT_WHITE, TFT_BLACK);
+      d.setTextDatum(MC_DATUM);
+      d.drawString('BACK', 35, 300, 2); d.drawString('|', 70, 300, 2);
+      d.drawString('UP', 100, 300, 2);  d.drawString('|', 130, 300, 2);
+      d.drawString('SEL', 165, 300, 2); d.drawString('|', 200, 300, 2);
+      d.drawString('DN', 220, 300, 2);
+    } 
+    else if (this.state === 2){
+      // Topics for Category
+      const topList = this.topics[this.catIndex] || [];
+      d.setTextDatum(TL_DATUM);
+      let y = 50;
+      topList.forEach((t, i) => {
+        if (i === this.topicIndex){
+          d.fillRect(10, y - 2, 220, 26, TFT_WHITE);
+          d.setTextColor(TFT_BLACK, TFT_WHITE);
+          d.drawString('> ' + t, 15, y + 2, 2);
+        } else {
+          d.setTextColor(TFT_WHITE, TFT_BLACK);
+          d.drawString('  ' + t, 15, y + 2, 2);
+        }
+        y += 32;
+      });
+
+      d.drawRoundRect(5, 285, 230, 30, 5, TFT_WHITE);
+      d.setTextColor(TFT_WHITE, TFT_BLACK);
+      d.setTextDatum(MC_DATUM);
+      d.drawString('BACK', 35, 300, 2); d.drawString('|', 70, 300, 2);
+      d.drawString('UP', 100, 300, 2);  d.drawString('|', 130, 300, 2);
+      d.drawString('SEL', 165, 300, 2); d.drawString('|', 200, 300, 2);
+      d.drawString('DN', 220, 300, 2);
+    } 
+    else if (this.state === 5){
+      // Article Viewer
       d.setTextDatum(TL_DATUM);
       d.setTextColor(TFT_CYAN, TFT_BLACK);
-      d.drawString(this.categories[this.sel], 15, 50, 2);
+      d.drawString(this.viewerTitle, 15, 48, 2);
 
       d.setTextColor(TFT_WHITE, TFT_BLACK);
-      const words = this.content[this.sel].split(' ');
-      let line = '', y = 80;
+      const words = this.viewerContent.split(' ');
+      let line = '', y = 75;
       for (const w of words){
         if ((line + ' ' + w).length > 25){
           d.drawString(line, 15, y, 2);
-          y += 20; line = w;
+          y += 18; line = w;
         } else line += (line ? ' ' : '') + w;
       }
       if (line) d.drawString(line, 15, y, 2);
-    }
 
-    d.drawRoundRect(5, 285, 230, 30, 5, TFT_WHITE);
-    d.setTextColor(TFT_WHITE, TFT_BLACK);
-    d.setTextDatum(MC_DATUM);
-    d.drawString('BACK', 120, 300, 2);
+      d.drawRoundRect(5, 285, 230, 30, 5, TFT_WHITE);
+      d.setTextColor(TFT_WHITE, TFT_BLACK);
+      d.setTextDatum(MC_DATUM);
+      d.drawString('BACK', 120, 300, 2);
+    }
   }
+
   handleTouch(x, y){
-    if (y >= 285){
-      if (this.state === 2) { this.state = 1; this.draw(); }
-      else if (this.state === 1) { this.state = 0; this.draw(); }
-      else this.sim.setState(STATE_LAUNCHER);
-      return;
-    }
     if (this.state === 0){
-      if (y >= 80 && y <= 120) { this.state = 1; this.draw(); }
-      else if (y >= 140 && y <= 180) { log('Online Help requires network', 'info'); }
-      return;
+      if (y >= 80 && y <= 120){ this.state = 1; this.catIndex = 0; this.draw(); return; }
+      if (y >= 140 && y <= 180){ log('Online Help requires network.', 'info'); return; }
+      if (y >= 285){ this.sim.setState(STATE_LAUNCHER); return; }
     }
-    if (this.state === 1 && y >= 60 && y <= 220){
-      const idx = Math.floor((y - 60) / 35);
-      if (idx < this.categories.length) { this.sel = idx; this.state = 2; this.draw(); }
+    else if (this.state === 1){
+      if (y >= 45 && y <= 260){
+        const idx = Math.floor((y - 45) / 32);
+        if (idx < this.categories.length){
+          this.catIndex = idx; this.topicIndex = 0; this.state = 2; this.draw();
+        }
+        return;
+      }
+      if (y >= 285){
+        if (x < 70) { this.state = 0; this.draw(); }
+        else if (x >= 70 && x < 130) { if (this.catIndex > 0) { this.catIndex--; this.draw(); } }
+        else if (x >= 130 && x < 200) { this.topicIndex = 0; this.state = 2; this.draw(); }
+        else if (x >= 200) { if (this.catIndex < this.categories.length - 1) { this.catIndex++; this.draw(); } }
+      }
+    }
+    else if (this.state === 2){
+      const topList = this.topics[this.catIndex] || [];
+      if (y >= 45 && y <= 260){
+        const idx = Math.floor((y - 45) / 32);
+        if (idx < topList.length){
+          this.topicIndex = idx;
+          this.openArticle(topList[idx]);
+        }
+        return;
+      }
+      if (y >= 285){
+        if (x < 70) { this.state = 1; this.draw(); }
+        else if (x >= 70 && x < 130) { if (this.topicIndex > 0) { this.topicIndex--; this.draw(); } }
+        else if (x >= 130 && x < 200) { this.openArticle(topList[this.topicIndex]); }
+        else if (x >= 200) { if (this.topicIndex < topList.length - 1) { this.topicIndex++; this.draw(); } }
+      }
+    }
+    else if (this.state === 5){
+      if (y >= 285) { this.state = 2; this.draw(); }
     }
   }
-  physical(k){ if (k === 'sel') this.handleTouch(120, 300); }
+
+  openArticle(title){
+    this.viewerTitle = title;
+    this.viewerContent = this.content[title] || 'No information available for this topic.';
+    this.state = 5;
+    this.draw();
+  }
+
+  physical(k){
+    if (this.state === 1){
+      if (k === 'up' && this.catIndex > 0) { this.catIndex--; this.draw(); }
+      else if (k === 'dn' && this.catIndex < this.categories.length - 1) { this.catIndex++; this.draw(); }
+      else if (k === 'sel') { this.topicIndex = 0; this.state = 2; this.draw(); }
+    } else if (this.state === 2){
+      const topList = this.topics[this.catIndex] || [];
+      if (k === 'up' && this.topicIndex > 0) { this.topicIndex--; this.draw(); }
+      else if (k === 'dn' && this.topicIndex < topList.length - 1) { this.topicIndex++; this.draw(); }
+      else if (k === 'sel') { this.openArticle(topList[this.topicIndex]); }
+    } else if (this.state === 5 && k === 'sel'){
+      this.state = 2; this.draw();
+    }
+  }
 }
 
 // --- 11. Touch Calibrator ---
@@ -1636,7 +1916,7 @@ class TouchCalibratorUI {
     d.setTextDatum(TC_DATUM);
     d.setTextColor(TFT_WHITE, TFT_BLACK);
     d.drawString("Touch Calibration", 120, 50, 4);
-    d.drawString("Tap the screen to calibrate", 120, 100, 2);
+    d.drawString("Tap the dot to calibrate", 120, 100, 2);
     d.fillCircle(40 + this.step * 40, 200, 10, TFT_RED);
   }
   handleTouch(){
@@ -1689,7 +1969,6 @@ class Simulator {
     this._bindInput();
     this._bindUI();
 
-    // Initialize IndexedDB first, then load the launcher
     this.vfs.init().then(() => {
       this.wifiConnected = !this.vfs.exists('/local/nowifi.txt');
       this.launcher.scanApps();
@@ -1706,7 +1985,6 @@ class Simulator {
     }, 1000);
   }
 
-  // Reactive listener called whenever storage is altered
   onStorageChanged(path){
     this.launcher.scanApps();
     if (this.state === STATE_LAUNCHER) {
@@ -1929,7 +2207,7 @@ class Simulator {
 
 window.addEventListener('DOMContentLoaded', () => {
   window.KryonOS = new Simulator();
-  log('KryonOS Simulator v2.4 initialized with IndexedDB Persistent Storage', 'ok');
+  log('KryonOS Simulator v2.5 ready — Overlap resolved & App Store UP/DN verified', 'ok');
 });
 </script>
 </body>
