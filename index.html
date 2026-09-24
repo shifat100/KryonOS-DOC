@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KryonOS Simulator v2.5 (Overlap Fixed & Full AppStore Nav)</title>
+<title>KryonOS Simulator v2.6 (Fixed Text Datum & Alignment)</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:radial-gradient(ellipse at top,#1e1e3a 0%,#0a0a15 100%);color:#e0e0e8;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;min-height:100vh;display:flex;justify-content:center;align-items:flex-start;padding:24px;gap:24px;flex-wrap:wrap}
@@ -398,7 +398,7 @@ while (true) {
 }
 
 /* =========================================================
-   TFT Display with Datum Support
+   TFT Display with Exact Alignment Support
    ========================================================= */
 const TL_DATUM=0, TC_DATUM=1, MC_DATUM=4, ML_DATUM=3;
 
@@ -451,6 +451,7 @@ class TFTDisplay {
     if (this.textDatum === MC_DATUM) { rx = x - w / 2; ry = y - sz / 2; }
     else if (this.textDatum === TC_DATUM) { rx = x - w / 2; ry = y; }
     else if (this.textDatum === ML_DATUM) { rx = x; ry = y - sz / 2; }
+    // TL_DATUM: rx = x, ry = y (default)
 
     t.ctx.textBaseline = 'top';
     t.ctx.textAlign = 'left';
@@ -574,7 +575,7 @@ class OnScreenKeyboard {
 }
 
 /* =========================================================
-   System & FS API
+   System & FS API (Guaranteed Top-Left Datum for User Apps)
    ========================================================= */
 function buildSystemAPI(sim){
   const disp = sim.disp, vfs = sim.vfs;
@@ -598,6 +599,7 @@ function buildSystemAPI(sim){
         disp.setTextColor(TFT_WHITE, TFT_RED);
         disp.setTextDatum(MC_DATUM);
         disp.drawString("X", 220, 15, 2);
+        disp.setTextDatum(TL_DATUM); // Always reset to TL_DATUM for apps!
       }
     },
     fillRect: (x,y,w,h,c) => disp.fillRect(x,y,w,h,c),
@@ -617,7 +619,11 @@ function buildSystemAPI(sim){
       disp.drawRect(x, y, 32, 32, TFT_WHITE);
       return true;
     },
-    drawString: (s, x, y, f=2) => disp.drawString(s, x, y, f),
+    // Exact match to JSBindings.cpp: forces TL_DATUM before drawing user string!
+    drawString: (s, x, y, f=2) => {
+      disp.setTextDatum(TL_DATUM);
+      disp.drawString(s, x, y, f);
+    },
     setTextColor: (f, b) => disp.setTextColor(f, b),
     setTextSize: (s) => disp.setTextSize(s),
     createSprite: (w, h) => {
@@ -729,7 +735,7 @@ function buildFSAPI(vfs){
 }
 
 /* =========================================================
-   UI Controllers (Clean Slate on Every Draw)
+   UI Controllers (Clean Canvas on Every Screen)
    ========================================================= */
 
 // --- 1. Launcher UI ---
@@ -761,7 +767,7 @@ class LauncherUI {
   total(){ return this.apps.length + 6; }
   draw(){
     const d = this.sim.disp;
-    d.fillScreen(TFT_BLACK); // Clean Slate
+    d.fillScreen(TFT_BLACK);
     d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
     d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
     d.drawRoundRect(6, 6, 228, 30, 5, TFT_GREEN);
@@ -832,7 +838,7 @@ class LauncherUI {
     }
 
     if (y >= 285 && y <= 315){
-      if (x < 60){ // UP
+      if (x < 60){
         if (this.selectedIndex > 1){
           this.selectedIndex--;
           if (this.selectedIndex === 5) this.selectedIndex--;
@@ -840,9 +846,9 @@ class LauncherUI {
           if (this.selectedIndex === 1) this.scrollOffset = 0;
           this.draw();
         }
-      } else if (x > 60 && x < 180){ // SEL
+      } else if (x > 60 && x < 180){
         this.execute();
-      } else if (x > 180){ // DN
+      } else if (x > 180){
         if (this.selectedIndex < total - 1){
           let next = this.selectedIndex + 1;
           if (next === 5) next++;
@@ -898,7 +904,7 @@ class InstallerUI {
   }
   draw(){
     const d = this.sim.disp;
-    d.fillScreen(TFT_BLACK); // Clean Slate
+    d.fillScreen(TFT_BLACK);
     if (this.dialog) { this._drawDialog(); return; }
     if (this.currentPath === '/help/') { this._drawHelp(); return; }
 
@@ -1122,7 +1128,7 @@ class SettingsUI {
   constructor(sim){ this.sim = sim; }
   draw(){
     const d = this.sim.disp;
-    d.fillScreen(TFT_BLACK); // Clean Slate
+    d.fillScreen(TFT_BLACK);
     d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
     d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
     d.drawRoundRect(6, 6, 228, 30, 5, TFT_GREEN);
@@ -1169,7 +1175,7 @@ class WiFiSettingsUI {
   constructor(sim){ this.sim = sim; }
   draw(){
     const d = this.sim.disp;
-    d.fillScreen(TFT_BLACK); // Clean Slate
+    d.fillScreen(TFT_BLACK);
     d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
     d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
     d.drawRoundRect(6, 6, 228, 30, 5, TFT_GREEN);
@@ -1227,7 +1233,7 @@ class WebServerUI {
   constructor(sim){ this.sim = sim; }
   draw(){
     const d = this.sim.disp;
-    d.fillScreen(TFT_BLACK); // Clean Slate
+    d.fillScreen(TFT_BLACK);
     d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
     d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
     d.drawRoundRect(6, 6, 228, 30, 5, TFT_CYAN);
@@ -1278,7 +1284,7 @@ class ManageAppsUI {
   }
   draw(){
     const d = this.sim.disp;
-    d.fillScreen(TFT_BLACK); // Clean Slate
+    d.fillScreen(TFT_BLACK);
     d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
     d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
     d.drawRoundRect(6, 6, 228, 30, 5, TFT_GREEN);
@@ -1372,7 +1378,7 @@ class TimeSettingsUI {
   constructor(sim){ this.sim = sim; this.use24h = true; this.ntp = true; }
   draw(){
     const d = this.sim.disp;
-    d.fillScreen(TFT_BLACK); // Clean Slate
+    d.fillScreen(TFT_BLACK);
     d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
     d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
     d.drawRoundRect(6, 6, 228, 30, 5, TFT_CYAN);
@@ -1419,7 +1425,7 @@ class AboutDeviceUI {
   constructor(sim){ this.sim = sim; }
   draw(){
     const d = this.sim.disp;
-    d.fillScreen(TFT_BLACK); // Clean Slate
+    d.fillScreen(TFT_BLACK);
     d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
     d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
     d.drawRoundRect(6, 6, 228, 30, 5, TFT_GREEN);
@@ -1455,11 +1461,11 @@ class AboutDeviceUI {
   physical(k){ if (k === 'sel') this.handleTouch(120, 300); }
 }
 
-// --- 9. App Store UI (Full Category & UP/DN Navigation) ---
+// --- 9. App Store UI ---
 class AppStoreUI {
   constructor(sim){
     this.sim = sim; 
-    this.state = 0; // 0=Categories, 1=Apps, 2=Info, 3=Dialog
+    this.state = 0;
     this.categories = ['[ Check For Apps Update ]', 'Demos', 'Games', 'Utilities'];
     this.storeData = {
       'Demos': [
@@ -1492,7 +1498,7 @@ class AppStoreUI {
 
   draw(){
     const d = this.sim.disp;
-    d.fillScreen(TFT_BLACK); // Clean Slate (Fixes overlap!)
+    d.fillScreen(TFT_BLACK);
     d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
     d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
     d.drawRoundRect(6, 6, 228, 30, 5, TFT_GREEN);
@@ -1531,7 +1537,6 @@ class AppStoreUI {
         }
       }
 
-      // App Store Footer with full UP/DN buttons matching C++
       d.drawRoundRect(5, 285, 230, 30, 5, TFT_WHITE);
       d.setTextColor(TFT_WHITE, TFT_BLACK);
       d.setTextDatum(MC_DATUM);
@@ -1593,7 +1598,6 @@ class AppStoreUI {
       return;
     }
 
-    // List item click (y: 45..270)
     if (y >= 45 && y <= 270){
       const list = this.getCurrentList();
       const clickedIdx = this.scrollOffset + Math.floor((y - 45) / 30);
@@ -1610,16 +1614,15 @@ class AppStoreUI {
       return;
     }
 
-    // Footer actions (BACK, UP, SEL, DN)
     if (y >= 285 && y <= 315){
-      if (x < 70){ // BACK
+      if (x < 70){
         if (this.state === 1) { this.state = 0; this.scrollOffset = 0; this.draw(); }
         else this.sim.setState(STATE_LAUNCHER);
-      } else if (x >= 70 && x < 130){ // UP
+      } else if (x >= 70 && x < 130){
         this.navUp();
-      } else if (x >= 130 && x < 200){ // SEL
+      } else if (x >= 130 && x < 200){
         this.navSel();
-      } else if (x >= 200){ // DN
+      } else if (x >= 200){
         this.navDown();
       }
     }
@@ -1716,11 +1719,11 @@ while (true) {
   }
 }
 
-// --- 10. Help Center UI (Overlap Completely Resolved) ---
+// --- 10. Help Center UI ---
 class HelpCenterUI {
   constructor(sim){
     this.sim = sim; 
-    this.state = 0; // 0=Main, 1=Offline Categories, 2=Topics List, 5=Article Viewer
+    this.state = 0;
     this.categories = ['Getting Started', 'Basic Navigation', 'Connectivity', 'Troubleshooting'];
     this.topics = {
       0: ['What is KryonOS', 'First setup guide', 'System vs User apps'],
@@ -1746,7 +1749,7 @@ class HelpCenterUI {
 
   draw(){
     const d = this.sim.disp;
-    d.fillScreen(TFT_BLACK); // Completely clears previous menu (No Overlap!)
+    d.fillScreen(TFT_BLACK);
     d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
     d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
     d.drawRoundRect(6, 6, 228, 30, 5, TFT_GREEN);
@@ -1757,7 +1760,6 @@ class HelpCenterUI {
     d.fillRect(10, 45, 220, 230, TFT_BLACK);
 
     if (this.state === 0){
-      // Main menu (Offline vs Online)
       d.drawRoundRect(20, 80, 200, 40, 5, TFT_WHITE);
       d.setTextColor(TFT_WHITE, TFT_BLACK);
       d.drawString('Offline Help Center', 120, 100, 2);
@@ -1769,7 +1771,6 @@ class HelpCenterUI {
       d.drawString('BACK', 120, 300, 2);
     } 
     else if (this.state === 1){
-      // Categories
       d.setTextDatum(TL_DATUM);
       let y = 50;
       this.categories.forEach((c, i) => {
@@ -1793,7 +1794,6 @@ class HelpCenterUI {
       d.drawString('DN', 220, 300, 2);
     } 
     else if (this.state === 2){
-      // Topics for Category
       const topList = this.topics[this.catIndex] || [];
       d.setTextDatum(TL_DATUM);
       let y = 50;
@@ -1818,7 +1818,6 @@ class HelpCenterUI {
       d.drawString('DN', 220, 300, 2);
     } 
     else if (this.state === 5){
-      // Article Viewer
       d.setTextDatum(TL_DATUM);
       d.setTextColor(TFT_CYAN, TFT_BLACK);
       d.drawString(this.viewerTitle, 15, 48, 2);
@@ -2093,10 +2092,13 @@ class Simulator {
     document.getElementById('state-label').textContent = 'RUN_APP';
 
     this.disp.fillScreen(TFT_BLACK);
+    // Draw exit button
     this.disp.fillRoundRect(200, 0, 40, 30, 5, TFT_RED);
     this.disp.setTextColor(TFT_WHITE, TFT_RED);
     this.disp.setTextDatum(MC_DATUM);
     this.disp.drawString("X", 220, 15, 2);
+    // Reset to TL_DATUM for the app
+    this.disp.setTextDatum(TL_DATUM);
 
     let transformed = code
       .replace(/(?<!await\s+)\bSystem\.delay\(/g, 'await System.delay(')
@@ -2135,6 +2137,7 @@ class Simulator {
       this.disp.setTextColor(TFT_WHITE, TFT_RED);
       this.disp.setTextDatum(MC_DATUM);
       this.disp.drawString("X", 220, 15, 2);
+      this.disp.setTextDatum(TL_DATUM);
       await new Promise(res => {
         const check = setInterval(() => {
           if (this.exitRequested){ clearInterval(check); res(); }
@@ -2165,6 +2168,7 @@ class Simulator {
     this.disp.setTextColor(TFT_RED, TFT_WHITE);
     this.disp.setTextDatum(MC_DATUM);
     this.disp.drawString("X", 220, 15, 2);
+    this.disp.setTextDatum(TL_DATUM);
 
     return new Promise(res => {
       const check = setInterval(() => {
@@ -2207,7 +2211,7 @@ class Simulator {
 
 window.addEventListener('DOMContentLoaded', () => {
   window.KryonOS = new Simulator();
-  log('KryonOS Simulator v2.5 ready — Overlap resolved & App Store UP/DN verified', 'ok');
+  log('KryonOS Simulator v2.6 ready — Text Alignment Fixed', 'ok');
 });
 </script>
 </body>
