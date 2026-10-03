@@ -307,141 +307,190 @@ class TFTDisplay {
 }
 
 /* =========================================================
-   Notification Overlay (matches KryonOS NotificationManager)
+   Notification Overlay Component (Faithful to NotificationManager.cpp)
    ========================================================= */
 class NotificationOverlay {
-  constructor(sim) {
+  constructor(sim){
     this.sim = sim;
     this.queue = [];
-    this.active = null;
-    this.state = 0; // 0: IDLE, 1: SLIDE_IN, 2: DISPLAYING, 3: SLIDE_OUT
-    this.currentY = -44;
-    this.animStart = 0;
-    this.displayStart = 0;
-    this.duration = 3000;
+    this.bgData = null;
+    this.bgCaptured = false;
+    this.nextId = 1;
+    this.ANIM_MS = 180;
   }
 
-  post(title, message, icon = 'info', duration = 3000) {
-    this.queue.push({
+  post(title, message, iconStr = 'info', durationMs = 3000){
+    const id = this.nextId++;
+    let iconType = 'info';
+    const s = String(iconStr).toLowerCase();
+    if (s.includes('warn')) iconType = 'warn';
+    else if (s.includes('err') || s.includes('danger')) iconType = 'error';
+    else if (s.includes('succ') || s.includes('ok')) iconType = 'success';
+
+    const notif = {
+      id,
       title: String(title || 'Notification').substring(0, 24),
       message: String(message || '').substring(0, 48),
-      icon: (icon || 'info').toLowerCase(),
-      duration: Math.max(800, duration || 3000)
-    });
-    if (!this.active) {
-      this._next();
-    }
+      iconType,
+      durationMs: Math.max(500, Math.min(15000, durationMs || 3000)),
+      state: 'SLIDE_IN',
+      currentY: -44,
+      animStartTime: performance.now(),
+      displayStartTime: 0
+    };
+
+    this.queue.push(notif);
+    log(`[Notify #${id}] ${notif.title}: ${notif.message}`, 'ok');
+    return id;
   }
 
-  _next() {
-    if (this.queue.length === 0) {
-      this.active = null;
-      this.state = 0;
-      this.currentY = -44;
-      return;
+  dismiss(id){
+    if (this.queue.length === 0) return false;
+    const idx = this.queue.findIndex(n => n.id === id);
+    if (idx === -1) return false;
+    if (idx === 0){
+      if (this.queue[0].state !== 'SLIDE_OUT'){
+        this.queue[0].state = 'SLIDE_OUT';
+        this.queue[0].animStartTime = performance.now();
+      }
+    } else {
+      this.queue.splice(idx, 1);
     }
-    this.active = this.queue.shift();
-    this.state = 1; // SLIDE_IN
-    this.currentY = -44;
-    this.animStart = performance.now();
-    this.duration = this.active.duration;
+    return true;
   }
 
-  dismiss() {
-    if (this.active && this.state !== 3) {
-      this.state = 3;
-      this.animStart = performance.now();
-    }
-  }
-
-  clearAll() {
+  clearAll(){
+    this.restoreBg();
     this.queue = [];
-    this.active = null;
-    this.state = 0;
-    this.currentY = -44;
   }
 
-  updateAndRender() {
-    if (!this.active || this.state === 0) return;
-    const now = performance.now();
-    const animMs = 180;
-    const restingY = 8;
-    const hiddenY = -44;
+  captureBg(){
+    if (this.bgCaptured) return;
+    const ctx = this.sim.disp.ctx;
+    this.bgData = ctx.getImageData(0, 0, 240, 64);
+    this.bgCaptured = true;
+  }
 
-    if (this.state === 1) { // SLIDE_IN
-      const elapsed = now - this.animStart;
-      if (elapsed >= animMs) {
-        this.currentY = restingY;
-        this.state = 2; // DISPLAYING
-        this.displayStart = now;
+  restoreBg(){
+    if (this.bgCaptured && this.bgData){
+      this.sim.disp.ctx.putImageData(this.bgData, 0, 0);
+      this.bgCaptured = false;
+      this.bgData = null;
+    }
+  }
+
+  updateAndRender(){
+    if (this.queue.length === 0) return;
+
+    if (!this.bgCaptured){
+      this.captureBg();
+    }
+
+    const item = this.queue[0];
+    const now = performance.now();
+    const RESTING_Y = 8;
+    const HIDDEN_Y = -44;
+    const CARD_X = 8, CARD_W = 224, CARD_H = 42, CARD_R = 6;
+
+    let targetY = item.currentY;
+
+    if (item.state === 'SLIDE_IN'){
+      const elapsed = now - item.animStartTime;
+      if (elapsed >= this.ANIM_MS){
+        targetY = RESTING_Y;
+        item.state = 'DISPLAYING';
+        item.displayStartTime = now;
       } else {
-        const t = elapsed / animMs;
+        const t = elapsed / this.ANIM_MS;
         const ease = 1 - Math.pow(1 - t, 3);
-        this.currentY = hiddenY + (restingY - hiddenY) * ease;
+        targetY = HIDDEN_Y + (RESTING_Y - HIDDEN_Y) * ease;
       }
-    } else if (this.state === 2) { // DISPLAYING
-      this.currentY = restingY;
-      if (now - this.displayStart >= this.duration) {
-        this.state = 3; // SLIDE_OUT
-        this.animStart = now;
+    } else if (item.state === 'DISPLAYING'){
+      targetY = RESTING_Y;
+      if (now - item.displayStartTime >= item.durationMs){
+        item.state = 'SLIDE_OUT';
+        item.animStartTime = now;
       }
-    } else if (this.state === 3) { // SLIDE_OUT
-      const elapsed = now - this.animStart;
-      if (elapsed >= animMs) {
-        this.currentY = hiddenY;
-        this._next();
+    } else if (item.state === 'SLIDE_OUT'){
+      const elapsed = now - item.animStartTime;
+      if (elapsed >= this.ANIM_MS){
+        this.restoreBg();
+        this.queue.shift();
+        if (this.queue.length > 0){
+          this.queue[0].state = 'SLIDE_IN';
+          this.queue[0].currentY = HIDDEN_Y;
+          this.queue[0].animStartTime = performance.now();
+          this.captureBg();
+        }
         return;
       } else {
-        const t = elapsed / animMs;
+        const t = elapsed / this.ANIM_MS;
         const ease = t * t * t;
-        this.currentY = restingY + (hiddenY - restingY) * ease;
+        targetY = RESTING_Y + (HIDDEN_Y - RESTING_Y) * ease;
       }
     }
 
-    this._drawCard(this.currentY);
-  }
+    item.currentY = targetY;
 
-  _drawCard(y) {
-    if (y <= -42) return;
-    const d = this.sim.disp;
-    const w = 224, h = 42, x = 8, r = 6;
-    
-    let borderColor = TFT_CYAN;
-    let badgeColor = TFT_CYAN;
-    let badgeText = 'i';
-
-    if (this.active.icon === 'warning' || this.active.icon === 'warn') {
-      borderColor = TFT_YELLOW;
-      badgeColor = TFT_YELLOW;
-      badgeText = '!';
-    } else if (this.active.icon === 'error' || this.active.icon === 'danger') {
-      borderColor = TFT_RED;
-      badgeColor = TFT_RED;
-      badgeText = 'X';
-    } else if (this.active.icon === 'success' || this.active.icon === 'ok') {
-      borderColor = TFT_GREEN;
-      badgeColor = TFT_GREEN;
-      badgeText = 'V';
+    // Restore background in the top region
+    if (this.bgData){
+      this.sim.disp.ctx.putImageData(this.bgData, 0, 0);
     }
 
-    // Card background (Dark navy 0x10A2)
-    d.fillRoundRect(x, y, w, h, r, 0x10A2);
-    d.drawRoundRect(x, y, w, h, r, borderColor);
+    // Render Notification Card
+    const ctx = this.sim.disp.ctx;
+    ctx.save();
+    const y = Math.round(targetY);
 
-    // Accent badge circle
-    d.fillCircle(x + 16, y + 21, 10, badgeColor);
-    d.setTextColor(TFT_BLACK, badgeColor);
-    d.setTextDatum(MC_DATUM);
-    d.drawString(badgeText, x + 16, y + 21, 2);
+    let borderColor = '#00f0ff';
+    let badgeBg = '#007acc';
+    let badgeText = 'i';
+    if (item.iconType === 'success'){
+      borderColor = '#00e676';
+      badgeBg = '#00e676';
+      badgeText = '✓';
+    } else if (item.iconType === 'warn'){
+      borderColor = '#ffb300';
+      badgeBg = '#ffb300';
+      badgeText = '!';
+    } else if (item.iconType === 'error'){
+      borderColor = '#ff3d00';
+      badgeBg = '#ff3d00';
+      badgeText = '✕';
+    }
+
+    ctx.fillStyle = '#101421';
+    ctx.strokeStyle = borderColor;
+    ctx.lineWidth = 1.5;
+    this.sim.disp._rr(ctx, CARD_X, y, CARD_W, CARD_H, CARD_R);
+    ctx.fill();
+    ctx.stroke();
+
+    // Circle Badge
+    ctx.beginPath();
+    ctx.arc(CARD_X + 16, y + 21, 10, 0, Math.PI * 2);
+    ctx.fillStyle = badgeBg;
+    ctx.fill();
+
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillStyle = '#000000';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(badgeText, CARD_X + 16, y + 21);
 
     // Title
-    d.setTextDatum(TL_DATUM);
-    d.setTextColor(TFT_WHITE, 0x10A2);
-    d.drawString(this.active.title, x + 34, y + 6, 2);
+    ctx.font = 'bold 12px "Courier New", monospace';
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText(item.title, CARD_X + 34, y + 6);
 
     // Message
-    d.setTextColor(0xBDD7, 0x10A2);
-    d.drawString(this.active.message, x + 34, y + 24, 1);
+    ctx.font = '10px "Courier New", monospace';
+    ctx.fillStyle = '#b0b8c4';
+    ctx.fillText(item.message, CARD_X + 34, y + 24);
+
+    ctx.restore();
   }
 }
 
@@ -621,10 +670,7 @@ function buildSystemAPI(sim){
     getOSVersion: () => KRYONOS_VERSION,
     getAPILevel: () => KRYONOS_API_LEVEL,
     prompt: (msg, init) => sim.keyboard.show(msg, init),
-    notify: (title, msg, icon, duration) => {
-      log(`[Notify] ${title}: ${msg}`, 'ok');
-      if (sim.notif) sim.notif.post(title, msg, icon, duration);
-    }
+    notify: (title, msg, icon = 'info', dur = 3000) => sim.notif.post(title, msg, icon, dur)
   };
 }
 
@@ -1266,7 +1312,6 @@ class Simulator {
   }
 
   _bindUI(){
-    // Set default Calendar Code in Editor
     document.getElementById('app-code').value = `var COLOR_BG = System.color(18, 18, 18);
 var COLOR_TEXT = System.color(255, 255, 255);
 var COLOR_DIM = System.color(150, 150, 150);
@@ -1456,4 +1501,4 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 </body>
- </html>
+    </html>
