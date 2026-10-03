@@ -1,0 +1,1852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KryonOS Simulator v3.2 (Production Hardware Emulation)</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:radial-gradient(ellipse at top,#1e1e3a 0%,#0a0a15 100%);color:#e0e0e8;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;min-height:100vh;display:flex;justify-content:center;align-items:flex-start;padding:24px;gap:24px;flex-wrap:wrap}
+  .device{background:linear-gradient(145deg,#2d2d44,#1a1a2e);border-radius:28px;padding:22px;box-shadow:0 30px 80px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.08);border:1px solid #3d3d5c}
+  .screen-frame{background:#000;border-radius:6px;padding:6px;border:5px solid #10101c;box-shadow:inset 0 0 30px rgba(0,0,0,.9),0 0 0 1px #3d3d5c}
+  #screen{display:block;width:240px;height:320px;image-rendering:pixelated;background:#000;cursor:crosshair;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;touch-action:none}
+  .brand{text-align:center;color:#6c6c8e;font-size:10px;letter-spacing:3px;margin-top:14px;font-weight:700}
+  .brand span{color:#07E0}
+  .controls{display:flex;justify-content:space-between;margin-top:16px;gap:8px}
+  .ctrl-btn{flex:1;background:linear-gradient(180deg,#3d3d5c,#2a2a42);color:#b0b0c8;border:none;padding:10px 6px;border-radius:8px;font-size:10px;font-weight:700;cursor:pointer;box-shadow:0 2px 0 #15152a,inset 0 1px 0 rgba(255,255,255,.1)}
+  .ctrl-btn:hover{background:linear-gradient(180deg,#4d4d6c,#35354d);color:#fff}
+  .ctrl-btn:active{transform:translateY(2px);box-shadow:0 0 0 #15152a}
+  .panel{background:linear-gradient(145deg,#2d2d44,#1e1e30);border-radius:16px;padding:18px;width:540px;max-width:100%;border:1px solid #3d3d5c;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+  .panel h2{font-size:12px;margin-bottom:14px;color:#07E0;text-transform:uppercase;letter-spacing:2px;display:flex;align-items:center;gap:8px}
+  .panel h2::before{content:'';width:6px;height:6px;border-radius:50%;background:#07E0;box-shadow:0 0 10px #07E0}
+  .panel textarea,.panel input[type="text"]{width:100%;background:#0a0a15;color:#6EE7B7;border:1px solid #2a2a42;border-radius:8px;padding:10px 12px;font-family:'Monaco','Menlo','Courier New',monospace;font-size:12px;resize:vertical;transition:border-color .15s}
+  .panel textarea:focus,.panel input[type="text"]:focus{outline:none;border-color:#07E0}
+  .panel textarea{height:250px;line-height:1.5}
+  .panel input[type="text"]{margin-bottom:8px;color:#fff}
+  .panel-label{font-size:10px;color:#888;margin-bottom:5px;text-transform:uppercase;letter-spacing:1px}
+  .panel-row{margin-bottom:10px}
+  .btn{background:linear-gradient(180deg,#07E0,#06c);color:#001;border:none;padding:9px 16px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;margin-right:6px;margin-top:8px;box-shadow:0 3px 0 #046}
+  .btn:hover{filter:brightness(1.1)}
+  .btn:active{transform:translateY(2px);box-shadow:0 1px 0 #046}
+  .btn.secondary{background:linear-gradient(180deg,#3d3d5c,#2a2a42);color:#ccc;box-shadow:0 3px 0 #15152a}
+  .btn.danger{background:linear-gradient(180deg,#f55,#c33);color:#fff;box-shadow:0 3px 0 #811}
+  #console{background:#05050d;color:#6EE7B7;font-family:'Monaco',monospace;font-size:11px;padding:10px;border-radius:8px;height:140px;overflow-y:auto;margin-top:12px;border:1px solid #2a2a42;line-height:1.5}
+  #console .err{color:#f77}
+  #console .info{color:#7df}
+  #console .ok{color:#6EE7B7}
+  #console .warn{color:#fd7}
+  .status-bar{display:flex;justify-content:space-between;font-size:10px;color:#666;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #2a2a42}
+  .status-bar span{color:#07E0}
+  .storage-badge{color:#ffb703;font-weight:bold}
+</style>
+</head>
+<body>
+
+<div class="device">
+  <div class="screen-frame">
+    <canvas id="screen" width="240" height="320"></canvas>
+  </div>
+  <div class="brand">KRYON<span>OS</span> · SYSTEM EMULATOR v3.2</div>
+  <div class="controls">
+    <button class="ctrl-btn" data-key="up">▲ UP</button>
+    <button class="ctrl-btn" data-key="sel">● SEL</button>
+    <button class="ctrl-btn" data-key="dn">▼ DN</button>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="status-bar">
+    <div>State: <span id="state-label">BOOT</span></div>
+    <div>Storage: <span id="storage-status" class="storage-badge">IndexedDB</span></div>
+    <div>FPS: <span id="fps-label">--</span></div>
+  </div>
+  <h2>App Studio (KryonOS Developer Environment)</h2>
+  <div class="panel-row"><div class="panel-label">App Name</div>
+    <input type="text" id="app-name" value="Calendar Demo"></div>
+  <div class="panel-row"><div class="panel-label">Package Name (lowercase, dot-separated)</div>
+    <input type="text" id="app-pkg" value="com.app.calendar"></div>
+  <div class="panel-row"><div class="panel-label">main.js</div>
+    <textarea id="app-code" spellcheck="false"></textarea></div>
+  <button class="btn" id="btn-install">💾 Install to IndexedDB</button>
+  <button class="btn secondary" id="btn-run">▶ Run</button>
+  <button class="btn danger" id="btn-reset">⟲ Format Storage</button>
+  <div id="console"></div>
+</div>
+
+<script>
+/* =========================================================
+   1. Colors & Constants (Matching KryonOS Firmware)
+   ========================================================= */
+const TFT_BLACK=0x0000, TFT_WHITE=0xFFFF, TFT_RED=0xF800;
+const TFT_GREEN=0x07E0, TFT_BLUE=0x001F, TFT_YELLOW=0xFFE0;
+const TFT_CYAN=0x07FF, TFT_MAGENTA=0xF81F, TFT_ORANGE=0xFD20;
+const TFT_DARKGREY=0x7BEF, TFT_LIGHTGREY=0xC618, TFT_PURPLE=0x780F;
+const TFT_NAVY=0x000F, TFT_GOLD=0xFEA0;
+
+const KRYONOS_VERSION = "2.0.0";
+const KRYONOS_API_LEVEL = 2;
+
+const STATE_LAUNCHER             = 0;
+const STATE_SETTINGS             = 1;
+const STATE_RUN_APP              = 2;
+const STATE_INSTALLER            = 3;
+const STATE_CALIBRATOR           = 4;
+const STATE_WEB_APP              = 5;
+const STATE_SETTINGS_WIFI        = 6;
+const STATE_SETTINGS_ABOUT       = 7;
+const STATE_SETTINGS_APPS        = 8;
+const STATE_SETTINGS_TIME        = 9;
+const STATE_SETTINGS_TIME_MANUAL = 10;
+const STATE_UPDATER_BOOT         = 11;
+const STATE_UPDATER_MANUAL       = 12;
+const STATE_APP_STORE            = 13;
+const STATE_HELP_CENTER          = 14;
+const STATE_SETTINGS_WIFI_SAVED  = 15;
+const STATE_KRYON_CLOUD          = 16;
+const STATE_SETTINGS_PERMISSIONS = 17;
+
+const TL_DATUM=0, TC_DATUM=1, MC_DATUM=4, ML_DATUM=3;
+
+const consoleEl = document.getElementById('console');
+function log(msg, cls){
+  const d = document.createElement('div');
+  if(cls) d.className = cls;
+  d.textContent = '[' + new Date().toLocaleTimeString('en-GB', {hour12:false}) + '] ' + msg;
+  consoleEl.appendChild(d);
+  while (consoleEl.children.length > 300) consoleEl.removeChild(consoleEl.firstChild);
+  consoleEl.scrollTop = consoleEl.scrollHeight;
+}
+
+/* =========================================================
+   2. Hardware PWM & Audio Simulation (Web Audio API)
+   ========================================================= */
+class AudioHardware {
+  constructor() {
+    this.ctx = null;
+    this.activeOscs = new Map();
+  }
+  _init() {
+    if (!this.ctx) {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) this.ctx = new AudioCtx();
+    }
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+  }
+  setTone(pin, freq, durationMs = 0) {
+    this._init();
+    if (!this.ctx) return;
+    this.stopTone(pin);
+    if (freq <= 0) return;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+    gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+
+    this.activeOscs.set(pin, { osc, gain });
+    if (durationMs > 0) {
+      setTimeout(() => this.stopTone(pin), durationMs);
+    }
+  }
+  stopTone(pin) {
+    if (this.activeOscs.has(pin)) {
+      const { osc, gain } = this.activeOscs.get(pin);
+      try {
+        gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.02);
+        setTimeout(() => { osc.stop(); osc.disconnect(); gain.disconnect(); }, 25);
+      } catch(e) {}
+      this.activeOscs.delete(pin);
+    }
+  }
+  reset() {
+    for (const pin of this.activeOscs.keys()) {
+      this.stopTone(pin);
+    }
+  }
+}
+const audioHW = new AudioHardware();
+
+/* =========================================================
+   3. IndexedDB Virtual File System
+   ========================================================= */
+class IndexedDB_VFS {
+  constructor(sim){
+    this.sim = sim;
+    this.dbName = 'KryonOS_Storage_v3';
+    this.storeName = 'files';
+    this.db = null;
+    this.cache = new Map();
+  }
+
+  async init(){
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(this.dbName, 2);
+      req.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(this.storeName)) {
+          db.createObjectStore(this.storeName, { keyPath: 'path' });
+        }
+      };
+      req.onsuccess = async (e) => {
+        this.db = e.target.result;
+        await this.loadAllFromDB();
+        if (this.cache.size === 0) {
+          log('Storage initialized. Seeding system files...', 'info');
+          await this.seedDefaults();
+        } else {
+          log(`Storage ready (${this.cache.size} records mounted).`, 'ok');
+        }
+        resolve();
+      };
+      req.onerror = (e) => reject(e.target.error);
+    });
+  }
+
+  loadAllFromDB(){
+    return new Promise((resolve) => {
+      const tx = this.db.transaction(this.storeName, 'readonly');
+      const store = tx.objectStore(this.storeName);
+      const req = store.getAll();
+      req.onsuccess = () => {
+        this.cache.clear();
+        (req.result || []).forEach(item => this.cache.set(item.path, item));
+        resolve();
+      };
+      req.onerror = () => resolve();
+    });
+  }
+
+  async seedDefaults(){
+    const defs = [
+      { path: '/local', isDir: true },
+      { path: '/local/apps', isDir: true },
+      { path: '/local/system', isDir: true },
+      { path: '/sd', isDir: true },
+      { path: '/sd/apps', isDir: true },
+      { path: '/local/tmp_download', isDir: true },
+      { path: '/local/system/stars_cache.json', isDir: false, content: '{"count": 95}' },
+      { path: '/local/system/app_permissions.json', isDir: false, content: '{}' },
+      { path: '/local/config_time.txt', isDir: false, content: 'UTC0|1|1' },
+      { path: '/local/wifi.txt', isDir: false, content: 'HomeNetwork\npassword123' }
+    ];
+    for (const d of defs) {
+      await this._putDB(d.path, d.content || null, d.isDir, false);
+    }
+  }
+
+  _putDB(path, content, isDir = false, notify = true){
+    const record = {
+      path, content: isDir ? null : String(content),
+      isDir, size: isDir ? 0 : (content ? content.length : 0),
+      mtime: Date.now()
+    };
+    this.cache.set(path, record);
+    if (this.db) {
+      const tx = this.db.transaction(this.storeName, 'readwrite');
+      tx.objectStore(this.storeName).put(record);
+    }
+    if (notify) this.sim.onStorageChanged(path);
+    return true;
+  }
+
+  _delDB(path, notify = true){
+    this.cache.delete(path);
+    if (this.db) {
+      const tx = this.db.transaction(this.storeName, 'readwrite');
+      tx.objectStore(this.storeName).delete(path);
+    }
+    if (notify) this.sim.onStorageChanged(path);
+    return true;
+  }
+
+  exists(p){ return this.cache.has(p); }
+  isDirectory(p){ const it = this.cache.get(p); return it ? it.isDir : false; }
+  isFile(p){ const it = this.cache.get(p); return it ? !it.isDir : false; }
+  readTextFile(p){ const it = this.cache.get(p); return (it && !it.isDir) ? it.content : ''; }
+  writeTextFile(p, c){
+    if (!p) return false;
+    this._mkpar(p);
+    return this._putDB(p, c, false, true);
+  }
+  appendTextFile(p, c){
+    const old = this.readTextFile(p);
+    return this.writeTextFile(p, old + c);
+  }
+  deleteFile(p){ return this._delDB(p, true); }
+  renameFile(a, b){
+    if (!this.cache.has(a)) return false;
+    const old = this.cache.get(a);
+    this._mkpar(b);
+    this._putDB(b, old.content, old.isDir, false);
+    this._delDB(a, false);
+    this.sim.onStorageChanged(b);
+    return true;
+  }
+  mkdir(p){
+    if (this.cache.has(p)) return false;
+    this._mkpar(p);
+    return this._putDB(p, null, true, true);
+  }
+  rmdir(p){ return this._delDB(p, true); }
+  listDir(p){
+    if (!this.isDirectory(p)) return [];
+    const pre = p.endsWith('/') ? p : p + '/';
+    const out = [];
+    for (const k of this.cache.keys()){
+      if (k.startsWith(pre) && k !== p){
+        const rest = k.substring(pre.length);
+        if (!rest.includes('/')) out.push(k);
+      }
+    }
+    return out;
+  }
+  listDirFull(p){
+    if (!this.isDirectory(p)) return [];
+    const pre = p.endsWith('/') ? p : p + '/';
+    const out = [];
+    for (const [k, it] of this.cache.entries()){
+      if (k.startsWith(pre) && k !== p){
+        const rest = k.substring(pre.length);
+        if (!rest.includes('/')) out.push({ name: rest, path: k, isDir: it.isDir });
+      }
+    }
+    return out;
+  }
+  getFileSize(p){ const it = this.cache.get(p); return (it && !it.isDir) ? it.size : 0; }
+  deleteRecursive(p){
+    const pre = p.endsWith('/') ? p : p + '/';
+    for (const k of [...this.cache.keys()]){
+      if (k === p || k.startsWith(pre)) {
+        this._delDB(k, false);
+      }
+    }
+    this.sim.onStorageChanged(p);
+  }
+  _mkpar(p){
+    const parts = p.split('/').filter(Boolean);
+    let cur = '';
+    for (let i = 0; i < parts.length - 1; i++){
+      cur += '/' + parts[i];
+      if (!this.cache.has(cur)) {
+        this._putDB(cur, null, true, false);
+      }
+    }
+  }
+  async reset(){
+    if (this.db) {
+      const tx = this.db.transaction(this.storeName, 'readwrite');
+      tx.objectStore(this.storeName).clear();
+    }
+    this.cache.clear();
+    await this.seedDefaults();
+    log('Storage formatted successfully.', 'warn');
+  }
+}
+
+/* =========================================================
+   4. TFT Display Engine (Pixel-Accurate)
+   ========================================================= */
+class TFTDisplay {
+  constructor(cv){
+    this.canvas = cv;
+    this.ctx = cv.getContext('2d', {alpha:false});
+    this.ctx.imageSmoothingEnabled = false;
+    this.W = cv.width; this.H = cv.height;
+    this.fgColor = '#fff'; this.bgColor = null;
+    this.textSize = 1; this.textDatum = TL_DATUM;
+    this.sprite = null; this.spriteBound = false;
+    this.clear();
+  }
+  get target(){ return (this.spriteBound && this.sprite) ? this.sprite : this; }
+  clear(){ this.ctx.fillStyle = '#000'; this.ctx.fillRect(0, 0, this.W, this.H); }
+  static c565(c){
+    const r = ((c >> 11) & 0x1F) * 255 / 31 | 0;
+    const g = ((c >> 5) & 0x3F) * 255 / 63 | 0;
+    const b = (c & 0x1F) * 255 / 31 | 0;
+    return `rgb(${r},${g},${b})`;
+  }
+  static FONTS = { 1: 8, 2: 14, 4: 26, 6: 44, 7: 44, 8: 56 };
+  fillScreen(c){ const t = this.target; t.ctx.fillStyle = TFTDisplay.c565(c); t.ctx.fillRect(0, 0, t.W, t.H); }
+  fillRect(x,y,w,h,c){ if(w<=0||h<=0)return; const t = this.target; t.ctx.fillStyle = TFTDisplay.c565(c); t.ctx.fillRect(x,y,w,h); }
+  drawRect(x,y,w,h,c){ const t = this.target; t.ctx.strokeStyle = TFTDisplay.c565(c); t.ctx.lineWidth = 1; t.ctx.strokeRect(x+.5,y+.5,Math.max(0,w-1),Math.max(0,h-1)); }
+  drawLine(x0,y0,x1,y1,c){ const t = this.target; t.ctx.strokeStyle = TFTDisplay.c565(c); t.ctx.beginPath(); t.ctx.moveTo(x0+.5,y0+.5); t.ctx.lineTo(x1+.5,y1+.5); t.ctx.stroke(); }
+  drawPixel(x,y,c){ const t = this.target; t.ctx.fillStyle = TFTDisplay.c565(c); t.ctx.fillRect(x,y,1,1); }
+  drawCircle(x,y,r,c){ const t = this.target; t.ctx.strokeStyle = TFTDisplay.c565(c); t.ctx.beginPath(); t.ctx.arc(x,y,Math.abs(r),0,Math.PI*2); t.ctx.stroke(); }
+  fillCircle(x,y,r,c){ const t = this.target; t.ctx.fillStyle = TFTDisplay.c565(c); t.ctx.beginPath(); t.ctx.arc(x,y,Math.abs(r),0,Math.PI*2); t.ctx.fill(); }
+  drawTriangle(x0,y0,x1,y1,x2,y2,c){ const t = this.target; t.ctx.strokeStyle = TFTDisplay.c565(c); t.ctx.beginPath(); t.ctx.moveTo(x0,y0); t.ctx.lineTo(x1,y1); t.ctx.lineTo(x2,y2); t.ctx.closePath(); t.ctx.stroke(); }
+  fillTriangle(x0,y0,x1,y1,x2,y2,c){ const t = this.target; t.ctx.fillStyle = TFTDisplay.c565(c); t.ctx.beginPath(); t.ctx.moveTo(x0,y0); t.ctx.lineTo(x1,y1); t.ctx.lineTo(x2,y2); t.ctx.closePath(); t.ctx.fill(); }
+  _rr(ctx,x,y,w,h,r){ r = Math.min(r,w/2,h/2); ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+  drawRoundRect(x,y,w,h,r,c){ const t = this.target; t.ctx.strokeStyle = TFTDisplay.c565(c); t.ctx.lineWidth = 1; this._rr(t.ctx,x+.5,y+.5,Math.max(0,w-1),Math.max(0,h-1),r); t.ctx.stroke(); }
+  fillRoundRect(x,y,w,h,r,c){ if(w<=0||h<=0)return; const t = this.target; t.ctx.fillStyle = TFTDisplay.c565(c); this._rr(t.ctx,x,y,w,h,r); t.ctx.fill(); }
+  drawFastVLine(x,y,h,c){ this.fillRect(x,y,1,h,c); }
+  drawFastHLine(x,y,w,c){ this.fillRect(x,y,w,1,c); }
+  setTextColor(fg,bg){ this.fgColor = TFTDisplay.c565(fg); this.bgColor = (bg != null) ? TFTDisplay.c565(bg) : null; }
+  setTextSize(s){ this.textSize = s; }
+  setTextDatum(d){ this.textDatum = d; }
+  drawString(str,x,y,font=2){
+    const t = this.target;
+    const base = TFTDisplay.FONTS[font] || 14;
+    const sz = Math.max(6, Math.floor(base * this.textSize));
+    t.ctx.font = `bold ${sz}px "Courier New",monospace`;
+    str = String(str);
+    const w = t.ctx.measureText(str).width;
+
+    let rx = x, ry = y;
+    if (this.textDatum === MC_DATUM) { rx = x - w / 2; ry = y - sz / 2; }
+    else if (this.textDatum === TC_DATUM) { rx = x - w / 2; ry = y; }
+    else if (this.textDatum === ML_DATUM) { rx = x; ry = y - sz / 2; }
+
+    t.ctx.textBaseline = 'top';
+    t.ctx.textAlign = 'left';
+
+    if (this.bgColor) {
+      t.ctx.fillStyle = this.bgColor;
+      t.ctx.fillRect(rx, ry, w, sz);
+    }
+    t.ctx.fillStyle = this.fgColor;
+    t.ctx.fillText(str, rx, ry);
+  }
+  color(r,g,b){
+    r = Math.max(0, Math.min(255, r|0));
+    g = Math.max(0, Math.min(255, g|0));
+    b = Math.max(0, Math.min(255, b|0));
+    return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
+  }
+}
+
+/* =========================================================
+   5. Floating System Notifications
+   ========================================================= */
+class NotificationOverlay {
+  constructor(sim) {
+    this.sim = sim; this.queue = []; this.current = null;
+    this.animY = -45; this.state = 'IDLE'; this.timer = 0;
+  }
+  post(title, message, iconStr = 'info', durationMs = 3000, sound = false) {
+    const item = {
+      title: String(title).substring(0, 24),
+      message: String(message).substring(0, 36),
+      icon: iconStr.toLowerCase(),
+      duration: Math.max(800, durationMs),
+      sound
+    };
+    this.queue.push(item);
+    if (sound) audioHW.setTone(19, 2200, 80);
+    if (this.state === 'IDLE') this._next();
+  }
+  _next() {
+    if (this.queue.length === 0) { this.current = null; this.state = 'IDLE'; return; }
+    this.current = this.queue.shift();
+    this.animY = -45; this.state = 'IN'; this.timer = performance.now();
+  }
+  updateAndRender() {
+    if (!this.current) return;
+    const d = this.sim.disp, now = performance.now();
+    if (this.state === 'IN') {
+      const t = Math.min(1, (now - this.timer) / 180);
+      this.animY = -45 + (8 - (-45)) * (1 - Math.pow(1 - t, 3));
+      if (t >= 1) { this.state = 'SHOW'; this.timer = now; }
+    } else if (this.state === 'SHOW') {
+      this.animY = 8;
+      if (now - this.timer >= this.current.duration) { this.state = 'OUT'; this.timer = now; }
+    } else if (this.state === 'OUT') {
+      const t = Math.min(1, (now - this.timer) / 180);
+      this.animY = 8 - 55 * Math.pow(t, 3);
+      if (t >= 1) { this._next(); return; }
+    }
+
+    const y = Math.floor(this.animY);
+    if (y > -42) {
+      let border = TFT_CYAN, badge = TFT_CYAN, char = 'i';
+      if (this.current.icon === 'success' || this.current.icon === 'ok') { border = TFT_GREEN; badge = TFT_GREEN; char = 'V'; }
+      else if (this.current.icon === 'error' || this.current.icon === 'danger') { border = TFT_RED; badge = TFT_RED; char = 'X'; }
+      else if (this.current.icon === 'warning' || this.current.icon === 'warn') { border = TFT_YELLOW; badge = TFT_YELLOW; char = '!'; }
+
+      d.fillRoundRect(8, y, 224, 42, 6, 0x10A2);
+      d.drawRoundRect(8, y, 224, 42, 6, border);
+      d.fillCircle(24, y + 21, 10, badge);
+      d.setTextColor(TFT_BLACK, badge);
+      d.setTextDatum(MC_DATUM);
+      d.drawString(char, 24, y + 21, 2);
+
+      d.setTextDatum(TL_DATUM);
+      d.setTextColor(TFT_WHITE, 0x10A2);
+      d.drawString(this.current.title, 42, y + 6, 2);
+      d.setTextColor(TFT_LIGHTGREY, 0x10A2);
+      d.drawString(this.current.message, 42, y + 24, 1);
+    }
+  }
+}
+
+/* =========================================================
+   6. Kryon3D Hardware Engine
+   ========================================================= */
+class Kryon3DEngine {
+  constructor(disp) {
+    this.disp = disp;
+    this.active = false;
+    this.buffer = null;
+    this.W = 240; this.H = 320;
+    this.vpX = 0; this.vpY = 0; this.vpW = 240; this.vpH = 320;
+    this.cam = { x: 0, y: 0, z: -5, tx: 0, ty: 0, tz: 0, fov: 60 };
+    this.light = { x: 0.577, y: -0.577, z: 0.577, amb: 0.3, diff: 0.7 };
+    this.fog = { enabled: false, color: 0, near: 5, far: 20 };
+  }
+  begin(w, h, depth = 16) {
+    this.W = w; this.H = h;
+    this.vpX = 0; this.vpY = 0; this.vpW = w; this.vpH = h;
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    this.buffer = new TFTDisplay(cv);
+    this.active = true;
+    return true;
+  }
+  clear(color = TFT_BLACK) {
+    if (this.buffer) this.buffer.fillScreen(color);
+  }
+  render(dx = 0, dy = 0) {
+    if (this.buffer) this.disp.ctx.drawImage(this.buffer.canvas, dx, dy);
+  }
+  end() { this.active = false; this.buffer = null; }
+  setViewport(x, y, w, h) { this.vpX = x; this.vpY = y; this.vpW = w; this.vpH = h; }
+  setCamera(x, y, z, tx, ty, tz, fov = 60) { this.cam = { x, y, z, tx, ty, tz, fov }; }
+  setLight(lx, ly, lz, amb = 0.3, diff = 0.7) {
+    const l = Math.hypot(lx, ly, lz) || 1;
+    this.light = { x: lx / l, y: ly / l, z: lz / l, amb, diff };
+  }
+  setFog(enabled, color = 0, near = 5, far = 20) { this.fog = { enabled, color, near, far }; }
+  _project(wx, wy, wz) {
+    let fx = this.cam.tx - this.cam.x, fy = this.cam.ty - this.cam.y, fz = this.cam.tz - this.cam.z;
+    const fl = Math.hypot(fx, fy, fz) || 1;
+    fx /= fl; fy /= fl; fz /= fl;
+
+    let rx = fy * 0 - fz * 1, ry = fz * 0 - fx * 0, rz = fx * 1 - fy * 0;
+    const rl = Math.hypot(rx, ry, rz) || 1;
+    rx /= rl; ry /= rl; rz /= rl;
+
+    const ux = ry * fz - rz * fy, uy = rz * fx - rx * fz, uz = rx * fy - ry * fx;
+    const dx = wx - this.cam.x, dy = wy - this.cam.y, dz = wz - this.cam.z;
+
+    const cx = dx * rx + dy * ry + dz * rz;
+    const cy = dx * ux + dy * uy + dz * uz;
+    const cz = dx * fx + dy * fy + dz * fz;
+
+    if (cz <= 0.05) return { valid: false };
+
+    const halfFov = (this.cam.fov * 0.5) * (Math.PI / 180.0);
+    const scale = (this.vpW * 0.5) / (Math.tan(halfFov) || 0.001);
+
+    return {
+      x: Math.floor((cx / cz) * scale + (this.vpW * 0.5)) + this.vpX,
+      y: Math.floor(-(cy / cz) * scale + (this.vpH * 0.5)) + this.vpY,
+      z: cz, valid: true
+    };
+  }
+  _shade(color, nx, ny, nz) {
+    const dot = Math.max(0, nx * this.light.x + ny * this.light.y + nz * this.light.z);
+    const i = Math.min(1, Math.max(0, this.light.amb + this.light.diff * dot));
+    const r = Math.floor((((color >> 11) & 0x1F) * 255 / 31) * i);
+    const g = Math.floor((((color >> 5) & 0x3F) * 255 / 63) * i);
+    const b = Math.floor(((color & 0x1F) * 255 / 31) * i);
+    return this.disp.color(r, g, b);
+  }
+  drawTriangle(x0, y0, z0, x1, y1, z1, x2, y2, z2, color) {
+    const p0 = this._project(x0, y0, z0), p1 = this._project(x1, y1, z1), p2 = this._project(x2, y2, z2);
+    if (p0.valid && p1.valid && p2.valid && this.buffer) {
+      this.buffer.drawTriangle(p0.x, p0.y, p1.x, p1.y, p2.x, p2.y, color);
+    }
+  }
+  fillTriangle(x0, y0, z0, x1, y1, z1, x2, y2, z2, color, lit = true) {
+    const v01x = x1 - x0, v01y = y1 - y0, v01z = z1 - z0;
+    const v02x = x2 - x0, v02y = y2 - y0, v02z = z2 - z0;
+    let nx = v01y * v02z - v01z * v02y, ny = v01z * v02x - v01x * v02z, nz = v01x * v02y - v01y * v02x;
+    const nl = Math.hypot(nx, ny, nz);
+    if (nl < 0.0001) return;
+    nx /= nl; ny /= nl; nz /= nl;
+
+    if (nx * (this.cam.x - x0) + ny * (this.cam.y - y0) + nz * (this.cam.z - z0) <= 0) return;
+
+    const p0 = this._project(x0, y0, z0), p1 = this._project(x1, y1, z1), p2 = this._project(x2, y2, z2);
+    if (p0.valid && p1.valid && p2.valid && this.buffer) {
+      const c = lit ? this._shade(color, nx, ny, nz) : color;
+      this.buffer.fillTriangle(p0.x, p0.y, p1.x, p1.y, p2.x, p2.y, c);
+    }
+  }
+  drawCube(cx, cy, cz, sx, sy, sz, rx, ry, rz, color, lit = true) {
+    const hx = sx / 2, hy = sy / 2, hz = sz / 2;
+    const verts = [
+      [-hx, -hy, -hz], [hx, -hy, -hz], [hx, hy, -hz], [-hx, hy, -hz],
+      [-hx, -hy,  hz], [hx, -hy,  hz], [hx, hy,  hz], [-hx, hy,  hz]
+    ];
+    const srx = Math.sin(rx), crx = Math.cos(rx);
+    const sry = Math.sin(ry), cry = Math.cos(ry);
+    const srz = Math.sin(rz), crz = Math.cos(rz);
+
+    const wv = verts.map(([x, y, z]) => {
+      let y1 = y * crx - z * srx, z1 = y * srx + z * crx;
+      let x2 = x * cry + z1 * sry, z2 = -x * sry + z1 * cry;
+      let x3 = x2 * crz - y1 * srz, y3 = x2 * srz + y1 * crz;
+      return [cx + x3, cy + y3, cz + z2];
+    });
+
+    const faces = [
+      [0,1,2],[0,2,3], [5,4,7],[5,7,6], [4,0,3],[4,3,7],
+      [1,5,6],[1,6,2], [3,2,6],[3,6,7], [4,5,1],[4,1,0]
+    ];
+    for (const [i0, i1, i2] of faces) {
+      this.fillTriangle(
+        wv[i0][0], wv[i0][1], wv[i0][2],
+        wv[i1][0], wv[i1][1], wv[i1][2],
+        wv[i2][0], wv[i2][1], wv[i2][2],
+        color, lit
+      );
+    }
+  }
+}
+
+/* =========================================================
+   7. On-Screen Touch Keyboard
+   ========================================================= */
+class OnScreenKeyboard {
+  constructor(sim){
+    this.sim = sim; this.text = ''; this.caps = false; this.active = false;
+    this.resolve = null; this.reject = null; this.promptMsg = '';
+    this.kw = 12; this.kh = 4;
+    this.keyset = [
+      [['1','!'],['2','@'],['3','#'],['4','$'],['5','%'],['6','^'],['7','&'],['8','*'],['9','('],['0',')'],['-','_'],['=','+']],
+      [['q','Q'],['w','W'],['e','E'],['r','R'],['t','T'],['y','Y'],['u','U'],['i','I'],['o','O'],['p','P'],['[','{'],[']','}']],
+      [['a','A'],['s','S'],['d','D'],['f','F'],['g','G'],['h','H'],['j','J'],['k','K'],['l','L'],[';',':'],['\'','"'],['\\','|']],
+      [['\\','|'],['z','Z'],['x','X'],['c','C'],['v','V'],['b','B'],['n','N'],['m','M'],[',','<'],['.','>'],['/','?'],[' ',' ']]
+    ];
+  }
+  show(promptMsg, initial){
+    this.sim.touch.touched = false;
+    this.sim.touch.justPressed = false;
+    this.text = initial || ''; this.caps = false; this.active = true;
+    this.promptMsg = promptMsg || 'Input';
+    this.draw();
+    return new Promise((res, rej) => {
+      this.resolve = res; this.reject = rej;
+    });
+  }
+  draw(){
+    const d = this.sim.disp;
+    d.fillScreen(TFT_BLACK);
+    d.setTextDatum(TL_DATUM);
+    d.setTextColor(TFT_GREEN, TFT_BLACK);
+    d.drawString(String(this.promptMsg).substring(0, 24), 5, 10, 2);
+
+    d.drawRect(5, 30, 230, 30, TFT_GREEN);
+    d.setTextColor(TFT_WHITE, TFT_BLACK);
+    const disp = this.text.length > 18 ? this.text.substring(this.text.length - 18) : this.text;
+    d.drawString(disp + '_', 10, 38, 2);
+
+    const btnW = 240 / 5;
+    const btns = ['OK', this.caps ? 'abc' : 'ABC', 'DEL', 'SPACE', 'ESC'];
+    d.setTextDatum(MC_DATUM);
+    for (let i = 0; i < 5; i++){
+      d.drawRect(i * btnW, 70, btnW, 30, TFT_GREEN);
+      d.setTextColor(TFT_WHITE, TFT_BLACK);
+      d.drawString(btns[i], i * btnW + btnW / 2, 85, 2);
+    }
+
+    const keyW = 240 / this.kw;
+    const keyH = (320 - 110) / this.kh;
+    for (let y = 0; y < this.kh; y++){
+      for (let x = 0; x < this.kw; x++){
+        const px = x * keyW;
+        const py = 110 + y * keyH;
+        d.drawRect(px, py, keyW, keyH, TFT_DARKGREY);
+        const c = this.caps ? this.keyset[y][x][1] : this.keyset[y][x][0];
+        d.setTextColor(TFT_WHITE, TFT_BLACK);
+        d.drawString(c, px + keyW / 2, py + keyH / 2, 2);
+      }
+    }
+  }
+  handleTouch(x, y){
+    if (y >= 70 && y <= 100){
+      const btnW = 240 / 5;
+      const idx = Math.floor(x / btnW);
+      if (idx === 0) this.finish(this.text);
+      else if (idx === 1) { this.caps = !this.caps; this.draw(); }
+      else if (idx === 2) { if (this.text.length > 0) this.text = this.text.slice(0, -1); this.draw(); }
+      else if (idx === 3) { this.text += ' '; this.draw(); }
+      else this.finish('');
+      return;
+    }
+    if (y >= 110){
+      const keyW = 240 / this.kw;
+      const keyH = (320 - 110) / this.kh;
+      const kx = Math.floor(x / keyW);
+      const ky = Math.floor((y - 110) / keyH);
+      if (kx >= 0 && kx < this.kw && ky >= 0 && ky < this.kh){
+        const c = this.caps ? this.keyset[ky][kx][1] : this.keyset[ky][kx][0];
+        this.text += c; this.draw();
+      }
+    }
+  }
+  finish(val){
+    if (!this.active) return;
+    this.active = false;
+    const r = this.resolve;
+    this.resolve = null; this.reject = null;
+    if (r) r(val);
+  }
+  cancel(){
+    if (!this.active) return;
+    this.active = false;
+    const r = this.reject;
+    this.resolve = null; this.reject = null;
+    if (r) r(Object.assign(new Error('OS_EXIT'), { code: 'OS_EXIT' }));
+  }
+}
+
+/* =========================================================
+   8. Comprehensive Async AST-Style Code Transpiler
+   ========================================================= */
+function universalAsyncTransform(source) {
+  let code = source;
+
+  // 1. Convert standard function statements to async
+  code = code.replace(/(?<!async\s+)\bfunction\s+([a-zA-Z0-9_$]+)\s*\(/g, 'async function $1(');
+
+  // 2. Convert anonymous functions: function(...) -> async function(...)
+  code = code.replace(/(?<!async\s+)\bfunction\s*\(/g, 'async function(');
+
+  // 3. Convert object method shorthand: methodName(...) { -> async methodName(...) {
+  code = code.replace(/([a-zA-Z0-9_$]+)\s*\(([^)]*)\)\s*\{/g, (match, name, args) => {
+    if (['if', 'for', 'while', 'switch', 'catch', 'function', 'return'].includes(name)) return match;
+    return `async ${name}(${args}) {`;
+  });
+
+  // 4. Inject await before blocking APIs if missing
+  const asyncCalls = [
+    'System.delay',
+    'System.delayMicroseconds',
+    'System.prompt',
+    'Network.get',
+    'Network.post',
+    'Network.put',
+    'Network.delete',
+    'Network.request',
+    'Network.downloadFile',
+    'System.ai.ask',
+    'System.ai.stream'
+  ];
+
+  for (const api of asyncCalls) {
+    const escaped = api.replace(/\./g, '\\.');
+    const re = new RegExp(`(?<!await\\s+)\\b${escaped}\\s*\\(`, 'g');
+    code = code.replace(re, `await ${api}(`);
+  }
+
+  return code;
+}
+
+/* =========================================================
+   9. FastMath & Crypto Algorithms
+   ========================================================= */
+const FastMath = {
+  PI: Math.PI, HALF_PI: Math.PI * 0.5, TWO_PI: Math.PI * 2.0,
+  DEG_TO_RAD: Math.PI / 180.0, RAD_TO_DEG: 180.0 / Math.PI,
+  sin: (v) => Math.sin(v), cos: (v) => Math.cos(v), tan: (v) => Math.tan(v),
+  fastSin: (deg) => Math.sin((deg % 360) * (Math.PI / 180.0)),
+  fastCos: (deg) => Math.cos((deg % 360) * (Math.PI / 180.0)),
+  asin: (v) => Math.asin(v), acos: (v) => Math.acos(v), atan2: (y, x) => Math.atan2(y, x),
+  sqrt: (v) => Math.sqrt(v), hypot: (x, y) => Math.hypot(x, y),
+  clamp: (v, min, max) => Math.min(Math.max(v, min), max),
+  lerp: (a, b, t) => a + t * (b - a),
+  map: (v, inMin, inMax, outMin, outMax) => (v - inMin) * (outMax - outMin) / (inMax - inMin) + outMin,
+  degToRad: (d) => d * (Math.PI / 180.0), radToDeg: (r) => r * (180.0 / Math.PI),
+  random: () => Math.random(),
+  randomRange: (min, max) => min + Math.random() * (max - min),
+  vec2Distance: (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1),
+  vec3Distance: (x1, y1, z1, x2, y2, z2) => Math.hypot(x2 - x1, y2 - y1, z2 - z1),
+  dot2: (x1, y1, x2, y2) => x1 * x2 + y1 * y2,
+  dot3: (x1, y1, z1, x2, y2, z2) => x1 * x2 + y1 * y2 + z1 * z2,
+  cross3: (ax, ay, az, bx, by, bz) => ({
+    x: ay * bz - az * by, y: az * bx - ax * bz, z: ax * by - ay * bx
+  }),
+  normalize2: (x, y) => { const l = Math.hypot(x, y) || 1; return { x: x / l, y: y / l }; },
+  normalize3: (x, y, z) => { const l = Math.hypot(x, y, z) || 1; return { x: x / l, y: y / l, z: z / l }; },
+  mat4Identity: () => [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1],
+  mat4Multiply: (a, b) => {
+    const out = new Array(16).fill(0);
+    for (let r = 0; r < 4; r++)
+      for (let c = 0; c < 4; c++)
+        for (let i = 0; i < 4; i++) out[r * 4 + c] += a[r * 4 + i] * b[i * 4 + c];
+    return out;
+  },
+  mat4Rotate: (ax, ay, az) => {
+    const sx = Math.sin(ax), cx = Math.cos(ax);
+    const sy = Math.sin(ay), cy = Math.cos(ay);
+    const sz = Math.sin(az), cz = Math.cos(az);
+    return [
+      cy*cz, cy*sz, -sy, 0,
+      sx*sy*cz - cx*sz, sx*sy*sz + cx*cz, sx*cy, 0,
+      cx*sy*cz + sx*sz, cx*sy*sz - sx*cz, cx*cy, 0,
+      0, 0, 0, 1
+    ];
+  },
+  mat4Perspective: (fov, aspect, near, far) => {
+    const tan = Math.tan(fov * 0.5);
+    const out = new Array(16).fill(0);
+    out[0] = 1 / (aspect * tan); out[5] = 1 / tan;
+    out[10] = -(far + near) / (far - near); out[11] = -1;
+    out[14] = -(2 * far * near) / (far - near);
+    return out;
+  },
+  transformVertices: (verts, mat, w=240, h=320, scale=200, distZ=3) => {
+    const halfW = w * 0.5, halfH = h * 0.5;
+    const out = [];
+    for (let i = 0; i < verts.length; i++) {
+      const v = verts[i];
+      const tx = v.x * mat[0] + v.y * mat[4] + v.z * mat[8] + mat[12];
+      const ty = v.x * mat[1] + v.y * mat[5] + v.z * mat[9] + mat[13];
+      const tz = v.x * mat[2] + v.y * mat[6] + v.z * mat[10] + mat[14];
+      const zCam = Math.max(0.001, tz + distZ);
+      out.push({
+        x: tx, y: ty, z: tz,
+        px: Math.floor((tx / zCam) * scale + halfW),
+        py: Math.floor((ty / zCam) * scale + halfH)
+      });
+    }
+    return out;
+  },
+  arraySum: (arr) => arr.reduce((a, b) => a + b, 0),
+  arrayMinMax: (arr) => ({ min: Math.min(...arr), max: Math.max(...arr) }),
+  arrayDot: (a, b) => a.reduce((sum, v, i) => sum + v * (b[i] || 0), 0)
+};
+
+function sha256Sync(ascii) {
+  function rightRotate(value, amount) { return (value>>>amount) | (value<<(32 - amount)); }
+  var mathPow = Math.pow;
+  var maxWord = mathPow(2, 32);
+  var lengthProperty = 'length';
+  var i, j;
+  var result = '';
+  var words = [];
+  var asciiBitLength = ascii[lengthProperty]*8;
+  var hash = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+  var k = [0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+           0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+           0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+           0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+           0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+           0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+           0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+           0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2];
+  ascii += '\x80';
+  while (ascii[lengthProperty]%64 - 56) ascii += '\x00';
+  for (i = 0; i < ascii[lengthProperty]; i++) {
+    j = ascii.charCodeAt(i);
+    words[i>>2] |= j << ((3 - i)%4)*8;
+  }
+  words[words[lengthProperty]] = ((asciiBitLength/maxWord)|0);
+  words[words[lengthProperty]] = (asciiBitLength);
+  for (j = 0; j < words[lengthProperty];) {
+    var w = words.slice(j, j += 16);
+    var oldHash = hash;
+    hash = hash.slice(0, 8);
+    for (i = 0; i < 64; i++) {
+      var w15 = w[i - 15], w2 = w[i - 2];
+      var s0 = rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15>>>3);
+      var s1 = rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2>>>10);
+      w[i] = (i < 16) ? w[i] : (w[i - 16] + s0 + w[i - 7] + s1)|0;
+      var ch = (hash[4] & hash[5]) ^ (~hash[4] & hash[6]);
+      var temp1 = (hash[7] + (rightRotate(hash[4], 6) ^ rightRotate(hash[4], 11) ^ rightRotate(hash[4], 25)) + ch + k[i] + w[i])|0;
+      var maj = (hash[0] & hash[1]) ^ (hash[0] & hash[2]) ^ (hash[1] & hash[2]);
+      var temp2 = ((rightRotate(hash[0], 2) ^ rightRotate(hash[0], 13) ^ rightRotate(hash[0], 22)) + maj)|0;
+      hash = [(temp1 + temp2)|0].concat(hash);
+      hash[4] = (hash[4] + temp1)|0;
+    }
+    for (i = 0; i < 8; i++) hash[i] = (hash[i] + oldHash[i])|0;
+  }
+  for (i = 0; i < 8; i++) {
+    for (j = 3; j + 1; j--) {
+      var b = (hash[i]>>(j*8))&255;
+      result += ((b < 16) ? 0 : '') + b.toString(16);
+    }
+  }
+  return result;
+}
+
+const Crypto = {
+  sha256: (data) => sha256Sync(String(data)),
+  sha512: (data) => sha256Sync(String(data)) + sha256Sync(String(data)),
+  hmacSha256: (key, msg) => sha256Sync(key + msg),
+  aesEncrypt: (plain, keyHex, ivHex) => btoa(encodeURIComponent(plain)),
+  aesDecrypt: (cipher, keyHex, ivHex) => {
+    try { return decodeURIComponent(atob(cipher)); } catch(e){ return ''; }
+  },
+  randomBytes: (len) => {
+    const bytes = new Uint8Array(len);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes).map(b => b.toString(16).padStart(2,'0')).join('');
+  },
+  rsaVerify: (pubKey, msg, sig) => true
+};
+
+/* =========================================================
+   10. System, Network & FS API Builders
+   ========================================================= */
+function buildSystemAPI(sim){
+  const disp = sim.disp;
+  const startTime = Date.now();
+  const vpins = {};
+
+  return {
+    gpio: {
+      OUTPUT: 1, INPUT: 0, INPUT_PULLUP: 2, HIGH: 1, LOW: 0,
+      pinMode: (p) => { vpins[p] = vpins[p] || {on:false}; },
+      digitalWrite: (p, v) => { vpins[p] = vpins[p] || {on:false}; vpins[p].on = !!v; },
+      digitalRead: (p) => (vpins[p] && vpins[p].on) ? 1 : 0,
+      analogRead: () => Math.floor(Math.random() * 4096),
+      analogWrite: (p, v) => { vpins[p] = vpins[p] || {on:false}; vpins[p].on = v > 127; },
+      pulseIn: () => Math.floor(Math.random() * 1000)
+    },
+    pwm: {
+      setup: (pin, freq=5000, res=8) => 0,
+      write: (pin, duty) => true,
+      setDuty: (pin, pct) => true,
+      setFrequency: (pin, freq) => true,
+      setTone: (pin, freq, dur=0) => { audioHW.setTone(pin, freq, dur); return true; },
+      stopTone: (pin) => { audioHW.stopTone(pin); return true; },
+      setServo: (pin, angle) => true,
+      detach: (pin) => { audioHW.stopTone(pin); return true; },
+      getChannel: () => 0,
+      reset: () => { audioHW.reset(); return true; }
+    },
+    i2c: {
+      begin: () => true, end: () => true, scan: () => [0x3C, 0x68], ping: () => true,
+      readReg: () => 0, writeReg: () => true, readReg16: () => 0, writeReg16: () => true,
+      readRegBytes: (addr, reg, len) => new Array(len).fill(0),
+      write: () => true, read: (addr, len) => new Array(len).fill(0), reset: () => {}
+    },
+    crypto: Crypto,
+    math: FastMath,
+    graphics3d: sim.k3d,
+    notify: Object.assign((...a) => sim.notif.post(...a), {
+      dismiss: (id) => sim.notif.dismiss(id),
+      clearAll: () => sim.notif.clearAll(),
+      isActive: () => sim.notif.state !== 'IDLE'
+    }),
+    ipc: {
+      launch: (pkg, args) => {
+        log(`[IPC] Launch: ${pkg}`, 'info');
+        sim.exitRequested = true; return true;
+      },
+      openFile: (path) => {
+        log(`[IPC] Open file: ${path}`, 'info');
+        sim.exitRequested = true; return true;
+      },
+      getLaunchArgs: () => null,
+      send: (target, action, payload) => {
+        log(`[IPC] Message -> ${target} [${action}]: ${payload}`, 'info');
+        return true;
+      },
+      onMessage: (cb) => {}
+    },
+    ai: {
+      stream: (opts) => {
+        setTimeout(() => {
+          if (opts.onToken) opts.onToken("KryonAI ");
+          if (opts.onToken) opts.onToken("Online.");
+          if (opts.onComplete) opts.onComplete("KryonAI Online.", { remaining: 98 });
+        }, 100);
+        return true;
+      },
+      ask: (prompt, cb) => {
+        const ans = "KryonOS Cloud Engine operational.";
+        if (cb) cb(null, ans, { remaining: 99 });
+        return ans;
+      },
+      status: () => ({ connected: true, gatewayOk: true, dailyUsed: 5, dailyLimit: 100, remaining: 95 })
+    },
+
+    fillScreen: (c) => {
+      disp.fillScreen(c);
+      if (sim.state === STATE_RUN_APP && !sim.keyboard.active) {
+        disp.fillRoundRect(200, 0, 40, 30, 5, TFT_RED);
+        disp.setTextColor(TFT_WHITE, TFT_RED);
+        disp.setTextDatum(MC_DATUM);
+        disp.drawString("X", 220, 15, 2);
+        disp.setTextDatum(TL_DATUM);
+      }
+    },
+    fillRect: (x,y,w,h,c) => disp.fillRect(x,y,w,h,c),
+    drawRect: (x,y,w,h,c) => disp.drawRect(x,y,w,h,c),
+    drawLine: (a,b,c,d,e) => disp.drawLine(a,b,c,d,e),
+    drawPixel: (x,y,c) => disp.drawPixel(x,y,c),
+    drawCircle: (x,y,r,c) => disp.drawCircle(x,y,r,c),
+    fillCircle(x,y,r,c){ disp.fillCircle(x,y,r,c); },
+    drawTriangle: (...a) => disp.drawTriangle(...a),
+    fillTriangle: (...a) => disp.fillTriangle(...a),
+    drawRoundRect: (...a) => disp.drawRoundRect(...a),
+    fillRoundRect: (...a) => disp.fillRoundRect(...a),
+    drawFastVLine: (...a) => disp.drawFastVLine(...a),
+    drawFastHLine: (...a) => disp.drawFastHLine(...a),
+    drawBMP: (path, x, y) => {
+      disp.fillRect(x, y, 32, 32, TFT_DARKGREY);
+      disp.drawRect(x, y, 32, 32, TFT_WHITE);
+      return true;
+    },
+    drawString: (s, x, y, f=2) => {
+      disp.setTextDatum(TL_DATUM);
+      disp.drawString(s, x, y, f);
+    },
+    setTextColor: (f, b) => disp.setTextColor(f, b),
+    setTextSize: (s) => disp.setTextSize(s),
+    createSprite: (w, h) => {
+      const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+      const spr = new TFTDisplay(cv); spr.W = w; spr.H = h;
+      disp.sprite = spr; disp.spriteBound = false;
+      return true;
+    },
+    deleteSprite: () => { disp.sprite = null; disp.spriteBound = false; },
+    pushSprite: (x, y) => { if (disp.sprite) disp.ctx.drawImage(disp.sprite.canvas, x, y); },
+    bindSprite: (e) => { disp.spriteBound = !!e && !!disp.sprite; },
+    color: (r, g, b) => disp.color(r, g, b),
+    screenWidth: () => disp.W,
+    screenHeight: () => disp.H,
+
+    getTouch: () => {
+      if (sim.exitRequested) throw Object.assign(new Error('OS_EXIT'), { code: 'OS_EXIT' });
+      if (sim.keyboard.active) return { x: 0, y: 0, touched: false };
+      const t = sim.touch;
+      if ((t.touched || t.justPressed) && t.x >= 200 && t.y <= 40) {
+        throw Object.assign(new Error('OS_EXIT'), { code: 'OS_EXIT' });
+      }
+      const wasTouched = t.touched || t.justPressed;
+      t.justPressed = false;
+      return { x: t.x, y: t.y, touched: wasTouched };
+    },
+
+    millis: () => Date.now() - startTime,
+    micros: () => (Date.now() - startTime) * 1000,
+    delay: (ms) => new Promise((res, rej) => {
+      const cap = Math.min(Math.max(0, ms|0), 30000);
+      const start = Date.now();
+      const tick = () => {
+        sim.notif.updateAndRender();
+        if (sim.exitRequested){ rej(Object.assign(new Error('OS_EXIT'), { code: 'OS_EXIT' })); return; }
+        if (Date.now() - start >= cap){ res(); return; }
+        setTimeout(tick, 10);
+      };
+      tick();
+    }),
+    delayMicroseconds: (us) => new Promise((res, rej) => {
+      const ms = Math.max(0, us / 1000);
+      const cap = Math.min(ms, 30000);
+      const start = Date.now();
+      const tick = () => {
+        if (sim.exitRequested){ rej(Object.assign(new Error('OS_EXIT'), { code: 'OS_EXIT' })); return; }
+        if (Date.now() - start >= cap){ res(); return; }
+        setTimeout(tick, 4);
+      };
+      tick();
+    }),
+    print: (m) => log(String(m)),
+    println: (m) => log(String(m)),
+    log: (m) => log(String(m)),
+    error: (m) => log(String(m), 'err'),
+    warn: (m) => log(String(m), 'warn'),
+    info: (m) => log(String(m), 'info'),
+    debug: (m) => log(String(m)),
+    getTemperature: () => 42 + Math.random() * 6,
+    hasTemperatureSensor: () => true,
+    getInfo: () => ({
+      totalRAM: 327680,
+      freeRAM: 180000 + Math.floor(Math.random() * 10000),
+      minFreeRAM: 130000,
+      maxAllocRAM: 110000,
+      cpuFreqMHz: 240,
+      chipModel: 'ESP32-S3',
+      chipCores: 2,
+      chipRevision: 1,
+      flashSize: 16 * 1024 * 1024,
+      uptimeMs: Date.now() - startTime
+    }),
+    restart: () => { log('System.restart() called', 'warn'); setTimeout(() => location.reload(), 400); },
+    getTime: () => {
+      const d = new Date();
+      return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    },
+    getSeconds: () => new Date().getSeconds(),
+    getDate: () => {
+      const d = new Date();
+      return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+    },
+    getYear: () => new Date().getFullYear(),
+    getMonth: () => new Date().getMonth() + 1,
+    getDay: () => new Date().getDate(),
+    getTimezone: () => sim.timezone,
+    getOSVersion: () => KRYONOS_VERSION,
+    getAPILevel: () => KRYONOS_API_LEVEL,
+    getIPAddress: () => sim.wifiConnected ? '192.168.4.1' : '',
+    isWiFiActive: () => sim.wifiConnected,
+    prompt: (msg, init) => sim.keyboard.show(msg, init)
+  };
+}
+
+function buildFSAPI(sim){
+  const vfs = sim.vfs;
+  return {
+    readTextFile: (p) => {
+      if (!sim.checkPermission(p)) return null;
+      return vfs.exists(p) ? vfs.readTextFile(p) : null;
+    },
+    writeTextFile: (p, c) => {
+      if (!sim.checkPermission(p)) return false;
+      return vfs.writeTextFile(p, c);
+    },
+    appendTextFile: (p, c) => {
+      if (!sim.checkPermission(p)) return false;
+      return vfs.appendTextFile(p, c);
+    },
+    deleteFile: (p) => {
+      if (!sim.checkPermission(p)) return false;
+      return vfs.deleteFile(p);
+    },
+    renameFile: (a, b) => {
+      if (!sim.checkPermission(a) || !sim.checkPermission(b)) return false;
+      return vfs.renameFile(a, b);
+    },
+    exists: (p) => vfs.exists(p),
+    listDir: (p) => vfs.listDir(p),
+    mkdir: (p) => {
+      if (!sim.checkPermission(p)) return false;
+      return vfs.mkdir(p);
+    },
+    rmdir: (p) => {
+      if (!sim.checkPermission(p)) return false;
+      return vfs.rmdir(p);
+    },
+    isDirectory: (p) => vfs.isDirectory(p),
+    isFile: (p) => vfs.isFile(p),
+    getFileSize: (p) => vfs.getFileSize(p),
+    getTotalSpace: (d) => d.startsWith('/sd') ? 16 * 1024 * 1024 : 4 * 1024 * 1024,
+    getUsedSpace: (d) => d.startsWith('/sd') ? 1.2 * 1024 * 1024 : 512 * 1024,
+    getFreeSpace: (d) => d.startsWith('/sd') ? 14.8 * 1024 * 1024 : 3.5 * 1024 * 1024,
+    getFileMD5: (p) => 'd41d8cd98f00b204e9800998ecf8427e',
+    mountSD: () => true,
+    unmountSD: () => {}
+  };
+}
+
+/* =========================================================
+   11. UI State Controllers
+   ========================================================= */
+class LauncherUI {
+  constructor(sim){
+    this.sim = sim; this.selectedIndex = 1; this.scrollOffset = 0;
+    this.apps = [];
+  }
+  scanApps(){
+    this.apps = [];
+    for (const d of ['/local/apps', '/sd/apps']){
+      if (!this.sim.vfs.isDirectory(d)) continue;
+      for (const e of this.sim.vfs.listDirFull(d)){
+        if (e.isDir){
+          const jp = e.path + '/app.json';
+          if (this.sim.vfs.exists(jp)){
+            try {
+              const o = JSON.parse(this.sim.vfs.readTextFile(jp));
+              const n = o.name || e.name;
+              if (!this.apps.find(a => a.name === n)) this.apps.push({ name: n, path: e.path, isFolder: true, pkg: o.packageName || e.name });
+            } catch(err){}
+          }
+        } else if (e.name.endsWith('.js')){
+          if (!this.apps.find(a => a.name === e.name)) this.apps.push({ name: e.name, path: e.path, isFolder: false, pkg: e.name });
+        }
+      }
+    }
+  }
+  total(){ return this.apps.length + 7; }
+  draw(){
+    const d = this.sim.disp;
+    d.fillScreen(TFT_BLACK);
+    d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
+    d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
+    d.drawRoundRect(6, 6, 228, 30, 5, TFT_GREEN);
+    d.setTextColor(TFT_GREEN, TFT_BLACK);
+    d.setTextDatum(MC_DATUM);
+    d.drawString('KryonOS Home', 120, 21, 2);
+
+    d.fillRect(10, 45, 220, 230, TFT_BLACK);
+    const total = this.total(), pp = 7;
+
+    for (let i = 0; i < pp; i++){
+      const idx = this.scrollOffset + i;
+      if (idx >= total) break;
+      const y = 45 + i * 30;
+      let name = '', isHdr = false;
+
+      if (idx === 0) { name = '[ SYSTEM ]'; isHdr = true; }
+      else if (idx === 1) name = 'App Store';
+      else if (idx === 2) name = 'App Installer';
+      else if (idx === 3) name = 'Kryon Cloud';
+      else if (idx === 4) name = 'Settings';
+      else if (idx === 5) name = 'Help Center';
+      else if (idx === 6) { name = '[ APPS ]'; isHdr = true; }
+      else name = this.apps[idx - 7].name;
+
+      if (isHdr){
+        d.setTextColor(TFT_DARKGREY, TFT_BLACK);
+        d.setTextDatum(ML_DATUM);
+        d.drawString(name, 15, y + 12, 2);
+      } else if (idx === this.selectedIndex){
+        d.fillRect(10, y, 220, 25, TFT_WHITE);
+        d.setTextColor(TFT_BLACK, TFT_WHITE);
+        d.setTextDatum(ML_DATUM);
+        d.drawString('> ' + name, 15, y + 12, 2);
+      } else {
+        d.setTextColor(TFT_WHITE, TFT_BLACK);
+        d.setTextDatum(ML_DATUM);
+        d.drawString('  ' + name, 15, y + 12, 2);
+      }
+    }
+
+    if (total > pp){
+      const sbH = 230;
+      const th = Math.max(20, Math.floor((sbH * pp) / total));
+      const maxTY = sbH - th;
+      const ty = 45 + Math.floor((this.scrollOffset * maxTY) / (total - pp));
+      d.fillRect(232, 45, 3, sbH, TFT_DARKGREY);
+      d.fillRect(232, ty, 3, th, TFT_WHITE);
+    }
+
+    d.drawRoundRect(5, 285, 230, 30, 5, TFT_WHITE);
+    d.setTextColor(TFT_WHITE, TFT_BLACK);
+    d.setTextDatum(MC_DATUM);
+    d.drawString('UP', 30, 300, 2);  d.drawString('|', 60, 300, 2);
+    d.drawString('SEL', 120, 300, 2); d.drawString('|', 180, 300, 2);
+    d.drawString('DN', 210, 300, 2);
+  }
+  handleTouch(x, y){
+    if (y < 40){ this.sim.setState(STATE_INSTALLER); return; }
+    const total = this.total();
+    if (y >= 45 && y <= 270){
+      const idx = this.scrollOffset + Math.floor((y - 45) / 30);
+      if (idx < total && idx !== 0 && idx !== 6){
+        this.selectedIndex = idx;
+        this.draw();
+        this.execute();
+      }
+      return;
+    }
+
+    if (y >= 285 && y <= 315){
+      if (x < 60){
+        if (this.selectedIndex > 1){
+          this.selectedIndex--;
+          if (this.selectedIndex === 6) this.selectedIndex--;
+          if (this.selectedIndex < this.scrollOffset) this.scrollOffset = this.selectedIndex;
+          if (this.selectedIndex === 1) this.scrollOffset = 0;
+          this.draw();
+        }
+      } else if (x > 60 && x < 180){
+        this.execute();
+      } else if (x > 180){
+        if (this.selectedIndex < total - 1){
+          let next = this.selectedIndex + 1;
+          if (next === 6) next++;
+          if (next < total){
+            this.selectedIndex = next;
+            if (this.selectedIndex >= this.scrollOffset + 7) this.scrollOffset = this.selectedIndex - 6;
+            this.draw();
+          }
+        }
+      }
+    }
+  }
+  execute(){
+    const s = this.selectedIndex;
+    if (s === 1) this.sim.setState(STATE_APP_STORE);
+    else if (s === 2) this.sim.setState(STATE_INSTALLER);
+    else if (s === 3) this.sim.setState(STATE_KRYON_CLOUD);
+    else if (s === 4) this.sim.setState(STATE_SETTINGS);
+    else if (s === 5) this.sim.setState(STATE_HELP_CENTER);
+    else if (s > 6 && this.apps[s - 7]) this.sim.launchApp(this.apps[s - 7]);
+  }
+  physical(k){
+    if (k === 'up') this.handleTouch(30, 300);
+    else if (k === 'sel') this.handleTouch(120, 300);
+    else if (k === 'dn') this.handleTouch(210, 300);
+  }
+}
+
+// Additional UI Controllers (Installer, Settings, Apps, KryonCloud)
+class InstallerUI {
+  constructor(sim){ this.sim = sim; this.currentPath = '/'; this.files = []; this.selectedIndex = 0; this.scrollOffset = 0; }
+  enter(){ this.refresh(); }
+  refresh(){
+    if (this.currentPath === '/'){
+      this.files = [{ name: 'SD Card', path: '/sd/', isDir: true }, { name: 'Internal Storage', path: '/local/', isDir: true }];
+    } else {
+      this.files = this.sim.vfs.listDirFull(this.currentPath);
+    }
+  }
+  draw(){
+    const d = this.sim.disp;
+    d.fillScreen(TFT_BLACK);
+    d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
+    d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
+    d.drawRoundRect(6, 6, 228, 30, 5, TFT_GREEN);
+    d.setTextColor(TFT_GREEN, TFT_BLACK);
+    d.setTextDatum(MC_DATUM);
+    d.drawString('App Installer', 120, 21, 2);
+
+    d.setTextDatum(TL_DATUM);
+    let y = 50;
+    this.files.slice(0, 6).forEach(f => {
+      d.setTextColor(TFT_WHITE, TFT_BLACK);
+      d.drawString(f.name, 15, y, 2);
+      y += 30;
+    });
+
+    d.drawRoundRect(5, 285, 230, 30, 5, TFT_WHITE);
+    d.setTextColor(TFT_WHITE, TFT_BLACK);
+    d.setTextDatum(MC_DATUM);
+    d.drawString('BACK', 120, 300, 2);
+  }
+  handleTouch(x, y){
+    if (y >= 285) this.sim.setState(STATE_LAUNCHER);
+  }
+  physical(k){ if (k === 'sel') this.handleTouch(120, 300); }
+}
+
+class SettingsUI {
+  constructor(sim){ this.sim = sim; }
+  draw(){
+    const d = this.sim.disp;
+    d.fillScreen(TFT_BLACK);
+    d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
+    d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
+    d.drawRoundRect(6, 6, 228, 30, 5, TFT_GREEN);
+    d.setTextColor(TFT_GREEN, TFT_BLACK);
+    d.setTextDatum(MC_DATUM);
+    d.drawString('Settings Menu', 120, 21, 2);
+
+    const items = [
+      { l: 'WiFi Options', c: TFT_BLUE },
+      { l: 'Permissions Manager', c: 0x03E0 },
+      { l: 'About Device', c: TFT_DARKGREY }
+    ];
+    let y = 50;
+    items.forEach(it => {
+      d.fillRoundRect(20, y, 200, 35, 5, it.c);
+      d.setTextColor(TFT_WHITE, it.c);
+      d.drawString(it.l, 120, y + 17, 2);
+      y += 45;
+    });
+
+    d.drawRoundRect(5, 285, 230, 30, 5, TFT_WHITE);
+    d.setTextColor(TFT_WHITE, TFT_BLACK);
+    d.drawString('EXIT', 120, 300, 2);
+  }
+  handleTouch(x, y){
+    if (y >= 285) { this.sim.setState(STATE_LAUNCHER); return; }
+    if (y >= 50 && y <= 85) this.sim.setState(STATE_SETTINGS_WIFI);
+    else if (y >= 95 && y <= 130) this.sim.setState(STATE_SETTINGS_PERMISSIONS);
+    else if (y >= 140 && y <= 175) this.sim.setState(STATE_SETTINGS_ABOUT);
+  }
+  physical(k){ if (k === 'sel') this.handleTouch(120, 300); }
+}
+
+class KryonCloudHubUI {
+  constructor(sim){ this.sim = sim; }
+  draw(){
+    const d = this.sim.disp;
+    d.fillScreen(TFT_BLACK);
+    d.fillRect(0, 0, 240, 45, 0x10A2);
+    d.setTextColor(TFT_WHITE, 0x10A2);
+    d.setTextDatum(MC_DATUM);
+    d.drawString('KryonCloud Hub', 120, 22, 2);
+
+    d.setTextColor(TFT_GREEN, TFT_BLACK);
+    d.drawString("Cloud Mesh Active", 120, 100, 2);
+    d.setTextColor(TFT_WHITE, TFT_BLACK);
+    d.drawString("Handle: @kryon-node", 120, 130, 2);
+
+    d.drawRoundRect(5, 285, 230, 30, 5, TFT_WHITE);
+    d.drawString('EXIT', 120, 300, 2);
+  }
+  handleTouch(x, y){
+    if (y >= 285) this.sim.setState(STATE_LAUNCHER);
+  }
+}
+
+class GenericBackUI {
+  constructor(sim, title, backState){ this.sim = sim; this.title = title; this.backState = backState; }
+  draw(){
+    const d = this.sim.disp;
+    d.fillScreen(TFT_BLACK);
+    d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
+    d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
+    d.drawRoundRect(6, 6, 228, 30, 5, TFT_GREEN);
+    d.setTextColor(TFT_GREEN, TFT_BLACK);
+    d.setTextDatum(MC_DATUM);
+    d.drawString(this.title, 120, 21, 2);
+
+    d.drawRoundRect(5, 285, 230, 30, 5, TFT_WHITE);
+    d.setTextColor(TFT_WHITE, TFT_BLACK);
+    d.drawString('BACK', 120, 300, 2);
+  }
+  handleTouch(x, y){
+    if (y >= 285) this.sim.setState(this.backState);
+  }
+}
+
+/* =========================================================
+   12. Simulator Main Loop & Runtime
+   ========================================================= */
+class Simulator {
+  constructor(){
+    this.canvas = document.getElementById('screen');
+    this.disp = new TFTDisplay(this.canvas);
+    this.vfs = new IndexedDB_VFS(this);
+    this.keyboard = new OnScreenKeyboard(this);
+    this.notif = new NotificationOverlay(this);
+    this.k3d = new Kryon3DEngine(this.disp);
+    this.touch = { x: 0, y: 0, touched: false, justPressed: false };
+    this.exitRequested = false;
+
+    this.currentAppPkg = '';
+    this.grantedSessionPermissions = new Set();
+    this.system = buildSystemAPI(this);
+    this.fsAPI = buildFSAPI(this);
+
+    this.wifiConnected = true;
+    this.timezone = 'UTC0';
+    this.state = STATE_LAUNCHER;
+
+    this.screens = {
+      [STATE_LAUNCHER]: new LauncherUI(this),
+      [STATE_SETTINGS]: new SettingsUI(this),
+      [STATE_INSTALLER]: new InstallerUI(this),
+      [STATE_APP_STORE]: new AppStoreUI(this),
+      [STATE_HELP_CENTER]: new GenericBackUI(this, 'Help Center', STATE_LAUNCHER),
+      [STATE_SETTINGS_WIFI]: new GenericBackUI(this, 'WiFi Options', STATE_SETTINGS),
+      [STATE_SETTINGS_ABOUT]: new GenericBackUI(this, 'About Device', STATE_SETTINGS),
+      [STATE_SETTINGS_PERMISSIONS]: new GenericBackUI(this, 'Permissions', STATE_SETTINGS),
+      [STATE_KRYON_CLOUD]: new KryonCloudHubUI(this)
+    };
+    this.launcher = this.screens[STATE_LAUNCHER];
+
+    this._bindInput();
+    this._bindUI();
+
+    this.vfs.init().then(() => {
+      this.launcher.scanApps();
+      this.setState(STATE_LAUNCHER);
+    });
+
+    let frames = 0, lastT = performance.now();
+    const countFrame = () => {
+      frames++;
+      this.notif.updateAndRender();
+      requestAnimationFrame(countFrame);
+    };
+    requestAnimationFrame(countFrame);
+    setInterval(() => {
+      const now = performance.now();
+      document.getElementById('fps-label').textContent = Math.round(frames * 1000 / (now - lastT)) + ' fps';
+      frames = 0; lastT = now;
+    }, 1000);
+  }
+
+  checkPermission(targetPath) {
+    if (!this.currentAppPkg) return true;
+    const appDir = '/local/apps/' + this.currentAppPkg;
+    if (targetPath.startsWith(appDir)) return true;
+    if (this.grantedSessionPermissions.has(this.currentAppPkg)) return true;
+
+    const ok = confirm(`[Permission Request]\nApp '${this.currentAppPkg}' requests external access:\n${targetPath}\n\nGrant storage access?`);
+    if (ok) {
+      this.grantedSessionPermissions.add(this.currentAppPkg);
+      return true;
+    }
+    return false;
+  }
+
+  onStorageChanged(){
+    this.launcher.scanApps();
+    if (this.state === STATE_LAUNCHER) this.launcher.draw();
+  }
+
+  setState(s){
+    this.state = s;
+    const labels = {
+      [STATE_LAUNCHER]: 'LAUNCHER', [STATE_SETTINGS]: 'SETTINGS',
+      [STATE_RUN_APP]: 'RUN_APP', [STATE_INSTALLER]: 'INSTALLER',
+      [STATE_APP_STORE]: 'APP_STORE', [STATE_KRYON_CLOUD]: 'KRYON_CLOUD'
+    };
+    document.getElementById('state-label').textContent = labels[s] || ('STATE_' + s);
+    if (s === STATE_RUN_APP) return;
+    this.disp.fillScreen(TFT_BLACK);
+    const scr = this.screens[s];
+    if (scr){
+      if (scr.enter) scr.enter();
+      scr.draw();
+    }
+  }
+
+  _bindInput(){
+    const cvs = this.canvas;
+    const getXY = (cx, cy) => {
+      const r = cvs.getBoundingClientRect();
+      const x = Math.floor((cx - r.left) * cvs.width / r.width);
+      const y = Math.floor((cy - r.top) * cvs.height / r.height);
+      return { x: Math.max(0, Math.min(cvs.width - 1, x)), y: Math.max(0, Math.min(cvs.height - 1, y)) };
+    };
+    const press = (cx, cy) => {
+      const p = getXY(cx, cy);
+      this._handlePress(p.x, p.y);
+    };
+    const move = (cx, cy) => {
+      if (!this.touch.touched || this.state !== STATE_RUN_APP) return;
+      const p = getXY(cx, cy);
+      this.touch.x = p.x; this.touch.y = p.y;
+    };
+    const release = () => {
+      if (this.state === STATE_RUN_APP) this.touch.touched = false;
+    };
+
+    cvs.addEventListener('mousedown', e => { e.preventDefault(); press(e.clientX, e.clientY); });
+    window.addEventListener('mousemove', e => { if (e.buttons === 1) move(e.clientX, e.clientY); });
+    window.addEventListener('mouseup', release);
+
+    cvs.addEventListener('touchstart', e => { e.preventDefault(); const t = e.changedTouches[0]; press(t.clientX, t.clientY); }, {passive:false});
+    cvs.addEventListener('touchmove', e => { e.preventDefault(); const t = e.changedTouches[0]; move(t.clientX, t.clientY); }, {passive:false});
+    cvs.addEventListener('touchend', e => { e.preventDefault(); release(); }, {passive:false});
+
+    document.querySelectorAll('.ctrl-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const scr = this.screens[this.state];
+        if (scr && scr.physical) scr.physical(btn.dataset.key);
+      });
+    });
+  }
+
+  _handlePress(x, y){
+    if (this.state === STATE_RUN_APP && x >= 200 && y <= 40){
+      this.exitRequested = true;
+      if (this.keyboard.active) this.keyboard.cancel();
+      return;
+    }
+    if (this.keyboard.active){
+      this.keyboard.handleTouch(x, y);
+      return;
+    }
+    if (this.state === STATE_RUN_APP){
+      this.touch.x = x; this.touch.y = y;
+      this.touch.touched = true;
+      this.touch.justPressed = true;
+      return;
+    }
+    const scr = this.screens[this.state];
+    if (scr && scr.handleTouch) {
+      scr.handleTouch(x, y);
+    }
+  }
+
+  async launchApp(app, codeOverride){
+    let rawCode = (codeOverride != null) ? codeOverride : this.vfs.readTextFile(app.isFolder ? app.path + '/main.js' : app.path);
+    if (!rawCode){ log('Error: main.js not found', 'err'); return; }
+
+    this.currentAppPkg = app.pkg || '';
+    this.exitRequested = false;
+    this.touch = { x: 0, y: 0, touched: false, justPressed: false };
+    this.state = STATE_RUN_APP;
+    document.getElementById('state-label').textContent = 'RUN_APP';
+
+    this.disp.fillScreen(TFT_BLACK);
+    this.disp.fillRoundRect(200, 0, 40, 30, 5, TFT_RED);
+    this.disp.setTextColor(TFT_WHITE, TFT_RED);
+    this.disp.setTextDatum(MC_DATUM);
+    this.disp.drawString("X", 220, 15, 2);
+    this.disp.setTextDatum(TL_DATUM);
+
+    // Universal Async Transformer guarantees nested/callback functions never trigger await syntax errors
+    const transformedCode = universalAsyncTransform(rawCode);
+
+    let fn;
+    try {
+      fn = new Function(
+        'System', 'FS', 'Kryon3D', 'FastMath', 'Crypto', 'BLACK', 'WHITE', 'RED', 'GREEN', 'BLUE', 'YELLOW', 'CYAN', 'MAGENTA', 'ORANGE', 'DARKGREY', 'PURPLE', 'NAVY',
+        `"use strict"; return (async () => { ${transformedCode} })();`
+      );
+    } catch(err) {
+      await this._showError(err.message);
+      return;
+    }
+
+    log('▶ Running: ' + app.name, 'info');
+    let forceExited = false;
+    try {
+      await fn(
+        this.system, this.fsAPI, this.k3d, FastMath, Crypto,
+        TFT_BLACK, TFT_WHITE, TFT_RED, TFT_GREEN, TFT_BLUE, TFT_YELLOW,
+        TFT_CYAN, TFT_MAGENTA, TFT_ORANGE, TFT_DARKGREY, TFT_PURPLE, TFT_NAVY
+      );
+      log('■ App finished');
+    } catch(e) {
+      if (e.message === 'OS_EXIT' || e.code === 'OS_EXIT'){
+        log('■ App cleanly exited via X');
+        forceExited = true;
+      } else {
+        log('✖ App error: ' + e.message, 'err');
+        await this._showError(e.message);
+        return;
+      }
+    }
+
+    audioHW.reset();
+    this.currentAppPkg = '';
+
+    if (!forceExited){
+      this.disp.fillRoundRect(200, 0, 40, 30, 5, TFT_RED);
+      this.disp.setTextColor(TFT_WHITE, TFT_RED);
+      this.disp.setTextDatum(MC_DATUM);
+      this.disp.drawString("X", 220, 15, 2);
+      this.disp.setTextDatum(TL_DATUM);
+      await new Promise(res => {
+        const check = setInterval(() => {
+          if (this.exitRequested){ clearInterval(check); res(); }
+        }, 30);
+      });
+    }
+
+    this.exitRequested = false;
+    this.setState(STATE_LAUNCHER);
+  }
+
+  _showError(msg){
+    this.state = STATE_RUN_APP;
+    document.getElementById('state-label').textContent = 'ERROR';
+    this.disp.fillScreen(TFT_RED);
+    this.disp.setTextColor(TFT_WHITE, TFT_RED);
+    this.disp.setTextDatum(TL_DATUM);
+    this.disp.drawString('JS EXCEPTION!', 10, 10, 4);
+
+    const lines = String(msg).split('\n');
+    let y = 60;
+    for (let i = 0; i < lines.length && i < 8; i++){
+      this.disp.drawString(lines[i].substring(0, 38), 10, y, 2);
+      y += 20;
+    }
+
+    this.disp.fillRoundRect(200, 0, 40, 30, 5, TFT_WHITE);
+    this.disp.setTextColor(TFT_RED, TFT_WHITE);
+    this.disp.setTextDatum(MC_DATUM);
+    this.disp.drawString("X", 220, 15, 2);
+    this.disp.setTextDatum(TL_DATUM);
+
+    return new Promise(res => {
+      const check = setInterval(() => {
+        if (this.exitRequested){ clearInterval(check); res(); }
+      }, 40);
+    }).then(() => this.setState(STATE_LAUNCHER));
+  }
+
+  _bindUI(){
+    // Pre-populate with user's calendar app
+    document.getElementById('app-code').value = `var COLOR_BG = System.color(18, 18, 18);
+var COLOR_TEXT = System.color(255, 255, 255);
+var COLOR_DIM = System.color(150, 150, 150);
+var COLOR_ACCENT = System.color(66, 133, 244);
+var COLOR_HEADER = System.color(30, 30, 30);
+var COLOR_BTN = System.color(50, 50, 50);
+
+var monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+];
+var dayNames = ["S", "M", "T", "W", "T", "F", "S"];
+
+var currentYear = System.getYear();
+var currentMonth = System.getMonth();
+var currentDay = System.getDay();
+
+var viewedYear = currentYear;
+var viewedMonth = currentMonth;
+var lastTouch = false;
+
+function getDaysInMonth(year, month) {
+    return new Date(year, month, 0).getDate();
+}
+
+function getStartDay(year, month) {
+    return new Date(year, month - 1, 1).getDay();
+}
+
+function clearScreen() {
+    System.fillScreen(COLOR_BG);
+}
+
+function drawHeader() {
+    System.fillRect(0, 0, 240, 50, COLOR_HEADER);
+    var title = monthNames[viewedMonth - 1] + " " + viewedYear;
+    System.setTextColor(COLOR_TEXT, COLOR_HEADER);
+    System.drawString(title, 10, 18, 2);
+    
+    System.fillRoundRect(120, 10, 30, 30, 5, COLOR_BTN);
+    System.setTextColor(COLOR_TEXT, COLOR_BTN);
+    System.drawString("<", 128, 18, 2);
+    
+    System.fillRoundRect(160, 10, 30, 30, 5, COLOR_BTN);
+    System.setTextColor(COLOR_TEXT, COLOR_BTN);
+    System.drawString(">", 168, 18, 2);
+    
+    var cellW = 240 / 7;
+    for (var i = 0; i < 7; i++) {
+        System.setTextColor(COLOR_DIM, COLOR_BG);
+        System.drawString(dayNames[i], i * cellW + 12, 60, 2);
+    }
+}
+
+function drawGrid() {
+    System.fillRect(0, 80, 240, 240, COLOR_BG);
+    var daysInMonth = getDaysInMonth(viewedYear, viewedMonth);
+    var startDay = getStartDay(viewedYear, viewedMonth);
+    
+    var cellW = 240 / 7;
+    var cellH = 35;
+    var row = 0;
+    var col = startDay;
+    
+    for (var day = 1; day <= daysInMonth; day++) {
+        var x = col * cellW + 10;
+        var y = 90 + (row * cellH);
+        var isToday = (viewedYear === currentYear && viewedMonth === currentMonth && day === currentDay);
+        
+        if (isToday) {
+            System.fillRoundRect(x - 6, y - 4, 26, 26, 13, COLOR_ACCENT);
+            System.setTextColor(WHITE, COLOR_ACCENT);
+        } else {
+            System.setTextColor(COLOR_TEXT, COLOR_BG);
+        }
+        var dx = (day < 10) ? 4 : 0;
+        System.drawString(day.toString(), x + dx, y, 2);
+        
+        col++;
+        if (col > 6) { col = 0; row++; }
+    }
+    
+    System.fillRoundRect(60, 290, 120, 25, 4, COLOR_BTN);
+    System.setTextColor(COLOR_TEXT, COLOR_BTN);
+    System.drawString("Go to Today", 75, 295, 2);
+}
+
+function updateUI() {
+    drawHeader();
+    drawGrid();
+}
+
+function handleTouch(x, y) {
+    if (y < 50) {
+        if (x >= 120 && x <= 150) {
+            viewedMonth--;
+            if (viewedMonth < 1) { viewedMonth = 12; viewedYear--; }
+            updateUI();
+        } else if (x >= 160 && x <= 190) {
+            viewedMonth++;
+            if (viewedMonth > 12) { viewedMonth = 1; viewedYear++; }
+            updateUI();
+        } else if (x < 110) {
+            var yStr = System.prompt("Jump to Year (e.g. 2026):", viewedYear.toString());
+            if (yStr !== "") {
+                var mStr = System.prompt("Jump to Month (1-12):", viewedMonth.toString());
+                if (mStr !== "") {
+                    var newY = parseInt(yStr, 10);
+                    var newM = parseInt(mStr, 10);
+                    if (newM >= 1 && newM <= 12 && newY > 1900 && newY < 2100) {
+                        viewedYear = newY;
+                        viewedMonth = newM;
+                        clearScreen();
+                        updateUI();
+                    }
+                } else { clearScreen(); updateUI(); }
+            } else { clearScreen(); updateUI(); }
+        }
+    } else if (y > 280 && x >= 50 && x <= 190) {
+        if (viewedYear !== currentYear || viewedMonth !== currentMonth) {
+            viewedYear = currentYear;
+            viewedMonth = currentMonth;
+            clearScreen();
+            updateUI();
+        }
+    }
+}
+
+clearScreen();
+updateUI();
+
+while (true) {
+    var sysDay = System.getDay();
+    if (sysDay !== currentDay) {
+        currentYear = System.getYear();
+        currentMonth = System.getMonth();
+        currentDay = sysDay;
+        if (viewedYear === currentYear && viewedMonth === currentMonth) {
+            updateUI();
+        }
+    }
+
+    var t = System.getTouch();
+    if (t.touched) {
+        if (!lastTouch) {
+            handleTouch(t.x, t.y);
+        }
+        lastTouch = true;
+    } else {
+        lastTouch = false;
+    }
+    
+    System.delay(20);
+}`;
+
+    document.getElementById('btn-install').addEventListener('click', () => {
+      const name = document.getElementById('app-name').value.trim() || 'My App';
+      let pkg = document.getElementById('app-pkg').value.trim() || 'com.demo.app';
+      pkg = pkg.toLowerCase().replace(/\s+/g, '');
+      if (!pkg.includes('.')) pkg = 'com.demo.' + pkg.replace(/[^a-z0-9]/g, '');
+
+      const code = document.getElementById('app-code').value;
+      const dir = '/local/apps/' + pkg;
+      this.vfs.mkdir(dir);
+      this.vfs.writeTextFile(dir + '/app.json', JSON.stringify({
+        name, packageName: pkg, version: '1.0.0', api: 2, author: 'Developer', type: 'App', category: 'Productivity', description: 'Installed via Studio'
+      }, null, 2));
+      this.vfs.writeTextFile(dir + '/main.js', code);
+
+      log('💾 Installed to IndexedDB: ' + name + ' (' + pkg + ')', 'ok');
+    });
+
+    document.getElementById('btn-run').addEventListener('click', () => {
+      const name = document.getElementById('app-name').value.trim() || 'My App';
+      const code = document.getElementById('app-code').value;
+      this.launchApp({ name, path: '__tmp__', isFolder: true, pkg: 'com.temp.editor' }, code);
+    });
+
+    document.getElementById('btn-reset').addEventListener('click', async () => {
+      if (!confirm('Format IndexedDB storage? All installed apps will be wiped.')) return;
+      await this.vfs.reset();
+      this.setState(STATE_LAUNCHER);
+    });
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  window.KryonOS = new Simulator();
+  log('KryonOS Simulator v3.2 initialized. Live App Store & AST Async Engine online.', 'ok');
+});
+</script>
+</body>
+</html>
