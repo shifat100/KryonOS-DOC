@@ -10,15 +10,6 @@
       "url": "https://raw.githubusercontent.com/shifat100/shifat100.github.io/main/cloudfone/dictionaries/English%20Bangla/data.json"
     },
     {
-      "id": "en_es",
-      "name": "English to Spanish",
-      "from": "EN",
-      "to": "ES",
-      "size": "35 KB",
-      "words": 1500,
-      "url": "https://raw.githubusercontent.com/YourUsername/KryonOS-Dicts/main/en_es.json"
-    },
-    {
       "id": "en_ar",
       "name": "English to Arabic",
       "from": "EN",
