@@ -7,7 +7,7 @@
       "to": "BN",
       "size": "7.19 MB",
       "words": 12000,
-      "url": "https://media.githubusercontent.com/media/shifat100/shifat100.github.io/main/cloudfone/dictionaries/English%20Bangla/data.json"
+      "url": "https://raw.githubusercontent.com/shifat100/shifat100.github.io/main/cloudfone/dictionaries/English%20Bangla/data.json"
     },
     {
       "id": "en_es",
@@ -25,7 +25,7 @@
       "to": "AR",
       "size": "3.03 MB",
       "words": 13509,
-      "url": "https://media.githubusercontent.com/media/shifat100/shifat100.github.io/main/cloudfone/dictionaries/English%20Arbic/data.json"
+      "url": "https://raw.githubusercontent.com/shifat100/shifat100.github.io/main/cloudfone/dictionaries/English%20Arbic/data.json"
     }
   ]
 }
