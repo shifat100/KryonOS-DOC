@@ -23,9 +23,9 @@
       "name": "English to Arabic",
       "from": "EN",
       "to": "AR",
-      "size": "32 KB",
-      "words": 1350,
-      "url": "https://raw.githubusercontent.com/YourUsername/KryonOS-Dicts/main/en_ar.json"
+      "size": "3.03 MB",
+      "words": 13509,
+      "url": "https://github.com/shifat100/shifat100.github.io/raw/refs/heads/main/cloudfone/dictionaries/English%20Arbic/data.json"
     }
   ]
 }
