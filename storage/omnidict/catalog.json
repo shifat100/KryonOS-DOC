@@ -5,9 +5,9 @@
       "name": "English to Bengali",
       "from": "EN",
       "to": "BN",
-      "size": "28 KB",
-      "words": 1200,
-      "url": "https://raw.githubusercontent.com/YourUsername/KryonOS-Dicts/main/en_bn.json"
+      "size": "7.19 MB",
+      "words": 12000,
+      "url": "https://github.com/shifat100/shifat100.github.io/raw/refs/heads/main/cloudfone/dictionaries/English%20Bangla/data.json"
     },
     {
       "id": "en_es",
