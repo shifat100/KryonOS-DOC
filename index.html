@@ -2,114 +2,66 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>KryonOS Complete Production Hardware Emulator</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>KryonOS Web Emulator — Production Firmware Simulator</title>
 <style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{
-    background:radial-gradient(ellipse at top,#1b1b36 0%,#090912 100%);
-    color:#e0e0e8;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-    min-height:100vh;display:flex;justify-content:center;align-items:flex-start;
-    padding:20px;gap:24px;flex-wrap:wrap
-  }
-  .device-wrapper{display:flex;flex-direction:column;align-items:center}
-  .device{
-    background:linear-gradient(145deg,#2b2b44,#151526);
-    border-radius:28px;padding:20px;
-    box-shadow:0 30px 80px rgba(0,0,0,.75),inset 0 1px 0 rgba(255,255,255,.1);
-    border:1px solid #3c3c5a;position:relative
-  }
-  .bezel-top{
-    display:flex;justify-content:space-between;align-items:center;
-    margin-bottom:8px;padding:0 4px
-  }
-  .hw-led{
-    width:8px;height:8px;border-radius:50%;background:#07E0;
-    box-shadow:0 0 8px #07E0;display:inline-block
-  }
-  .exit-hw-btn{
-    background:linear-gradient(180deg,#ef4444,#b91c1c);color:#fff;
-    border:none;padding:4px 12px;border-radius:6px;font-size:10px;
-    font-weight:700;cursor:pointer;display:none;box-shadow:0 2px 0 #7f1d1d
-  }
-  .exit-hw-btn.active{display:inline-block}
-  .screen-frame{
-    background:#000;border-radius:6px;padding:5px;
-    border:4px solid #0f0f1a;box-shadow:inset 0 0 25px rgba(0,0,0,.95),0 0 0 1px #3a3a54
-  }
-  #screen{
-    display:block;width:240px;height:320px;
-    image-rendering:pixelated;background:#000;cursor:crosshair;
-    user-select:none;-webkit-user-select:none;touch-action:none
-  }
-  .brand{
-    text-align:center;color:#707090;font-size:10px;
-    letter-spacing:3px;margin-top:12px;font-weight:700
-  }
-  .brand span{color:#07E0}
-  .controls{display:flex;justify-content:space-between;margin-top:14px;gap:8px;width:100%}
-  .ctrl-btn{
-    flex:1;background:linear-gradient(180deg,#3a3a56,#25253b);
-    color:#b0b0c8;border:none;padding:9px 4px;border-radius:8px;
-    font-size:10px;font-weight:700;cursor:pointer;
-    box-shadow:0 2px 0 #131324,inset 0 1px 0 rgba(255,255,255,.1);
-    transition:all .1s
-  }
-  .ctrl-btn:hover{background:linear-gradient(180deg,#484868,#2f2f47);color:#fff}
-  .ctrl-btn:active{transform:translateY(2px);box-shadow:0 0 0 #131324}
-  
-  .panel{
-    background:linear-gradient(145deg,#24243a,#161625);
-    border-radius:18px;padding:20px;width:580px;max-width:100%;
-    border:1px solid #3a3a54;box-shadow:0 20px 60px rgba(0,0,0,.5)
-  }
-  .panel h2{
-    font-size:12px;margin-bottom:14px;color:#07E0;
-    text-transform:uppercase;letter-spacing:2px;
-    display:flex;align-items:center;gap:8px
-  }
-  .panel h2::before{
-    content:'';width:8px;height:8px;border-radius:50%;
-    background:#07E0;box-shadow:0 0 10px #07E0
-  }
-  .panel textarea,.panel input[type="text"]{
-    width:100%;background:#090912;color:#6EE7B7;
-    border:1px solid #28283e;border-radius:8px;
-    padding:10px 12px;font-family:'Monaco','Menlo','Courier New',monospace;
-    font-size:12px;resize:vertical;transition:border-color .15s
-  }
-  .panel textarea:focus,.panel input[type="text"]:focus{
-    outline:none;border-color:#07E0;box-shadow:0 0 8px rgba(7,224,0,.2)
-  }
-  .panel textarea{height:220px;line-height:1.5}
-  .panel input[type="text"]{margin-bottom:10px;color:#fff}
-  .panel-label{font-size:10px;color:#9494ad;margin-bottom:5px;text-transform:uppercase;letter-spacing:1px}
-  .panel-row{margin-bottom:10px}
-  .btn{
-    background:linear-gradient(180deg,#07E0,#00a850);
-    color:#000;border:none;padding:9px 16px;border-radius:8px;
-    font-size:12px;font-weight:700;cursor:pointer;margin-right:6px;
-    margin-top:6px;box-shadow:0 3px 0 #006630;transition:all .1s
-  }
-  .btn:hover{filter:brightness(1.15)}
-  .btn:active{transform:translateY(2px);box-shadow:0 1px 0 #006630}
-  .btn.secondary{background:linear-gradient(180deg,#3a3a56,#25253b);color:#ccc;box-shadow:0 3px 0 #131324}
-  .btn.danger{background:linear-gradient(180deg,#f43f5e,#be123c);color:#fff;box-shadow:0 3px 0 #881337}
-  #console{
-    background:#05050a;color:#6EE7B7;font-family:'Monaco',monospace;
-    font-size:11px;padding:12px;border-radius:8px;height:130px;
-    overflow-y:auto;margin-top:14px;border:1px solid #242438;line-height:1.5
-  }
-  #console .err{color:#ff6b6b}
-  #console .info{color:#38bdf8}
-  #console .ok{color:#4ade80}
-  #console .warn{color:#fbbf24}
-  .status-bar{
-    display:flex;justify-content:space-between;font-size:11px;
-    color:#8a8aa4;margin-bottom:12px;padding-bottom:8px;
-    border-bottom:1px solid #28283e
-  }
-  .status-bar span{color:#07E0;font-weight:600}
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0b0b14;--panel:#161625;--panel2:#1e1e30;--border:#2c2c46;--text:#d0d0e0;--dim:#7a7a95;--accent:#00d47a;--accent2:#00b4ff;--warn:#fbbf24;--err:#f43f5e;--ok:#10b981}
+body{background:radial-gradient(ellipse at top,#181828 0%,#080810 100%);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;min-height:100vh;display:flex;justify-content:center;align-items:flex-start;padding:16px;gap:20px;flex-wrap:wrap}
+.device-wrapper{display:flex;flex-direction:column;align-items:center;position:sticky;top:16px}
+.device{background:linear-gradient(145deg,#2a2a42,#141422);border-radius:24px;padding:16px;box-shadow:0 30px 80px rgba(0,0,0,.75),inset 0 1px 0 rgba(255,255,255,.08);border:1px solid #3a3a56}
+.bezel-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding:0 4px;min-height:22px}
+.bezel-left{display:flex;align-items:center;gap:6px}
+.hw-led{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);display:inline-block}
+.hw-label{font-size:9px;color:#666;font-weight:700;letter-spacing:1px}
+.hw-exit{background:linear-gradient(180deg,#ef4444,#b91c1c);color:#fff;border:none;padding:3px 10px;border-radius:5px;font-size:10px;font-weight:700;cursor:pointer;box-shadow:0 2px 0 #7f1d1d;display:none}
+.hw-exit.active{display:inline-block}
+.screen-frame{position:relative;background:#000;border-radius:6px;padding:5px;box-shadow:inset 0 0 25px rgba(0,0,0,.95),0 0 0 1px #38385a}
+#screen{display:block;image-rendering:pixelated;background:#000;cursor:crosshair;user-select:none;-webkit-user-select:none;touch-action:none}
+#overlay{position:absolute;left:5px;top:5px;image-rendering:pixelated;pointer-events:none}
+.brand{text-align:center;color:#6a6a85;font-size:10px;letter-spacing:2.5px;margin-top:10px;font-weight:700}
+.brand span{color:var(--accent2)}
+.controls{display:flex;justify-content:space-between;margin-top:12px;gap:8px;width:100%}
+.ctrl-btn{flex:1;background:linear-gradient(180deg,#3a3a56,#25253b);color:#b0b0c8;border:none;padding:9px 4px;border-radius:8px;font-size:10px;font-weight:700;cursor:pointer;box-shadow:0 2px 0 #131324,inset 0 1px 0 rgba(255,255,255,.08);transition:all .1s}
+.ctrl-btn:hover{background:linear-gradient(180deg,#484868,#2f2f47);color:#fff}
+.ctrl-btn:active{transform:translateY(2px);box-shadow:0 0 0 #131324}
+.panel{background:linear-gradient(145deg,#222236,#151524);border-radius:16px;padding:16px;width:600px;max-width:100%;border:1px solid #35354e;box-shadow:0 20px 60px rgba(0,0,0,.55);display:flex;flex-direction:column;gap:10px}
+.status-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:11px;padding:10px 12px;background:#0d0d18;border:1px solid var(--border);border-radius:8px}
+.status-bar .st{display:flex;flex-direction:column;gap:2px;min-width:0}
+.status-bar .st-label{color:var(--dim);font-size:9px;text-transform:uppercase;letter-spacing:.5px}
+.status-bar .st-val{color:var(--accent);font-weight:700;font-family:'Menlo',monospace;overflow:hidden;text-overflow:ellipsis}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row label{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.row select,.row input{background:#0a0a14;color:#fff;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;font-family:'Menlo',monospace;outline:none}
+.row select:focus,.row input:focus{border-color:var(--accent2)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);padding-bottom:0}
+.tab{background:transparent;border:none;color:var(--dim);padding:8px 14px;font-size:11px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;text-transform:uppercase;letter-spacing:.5px;transition:all .15s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-pane{display:none;flex-direction:column;gap:10px}
+.tab-pane.active{display:flex}
+.panel-label{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+textarea.code-editor{width:100%;height:280px;background:#07070f;color:#7ee787;border:1px solid var(--border);border-radius:8px;padding:12px;font-family:'Menlo','Monaco','Courier New',monospace;font-size:12px;line-height:1.55;resize:vertical;outline:none;tab-size:4;white-space:pre;overflow:auto}
+textarea.code-editor:focus{border-color:var(--accent)}
+.btn{background:linear-gradient(180deg,var(--accent),#00a35e);color:#000;border:none;padding:8px 14px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;box-shadow:0 2px 0 #006b3d;transition:all .1s}
+.btn:hover{filter:brightness(1.1)}
+.btn:active{transform:translateY(2px);box-shadow:none}
+.btn.sec{background:linear-gradient(180deg,#3a3a56,#25253b);color:#ccc;box-shadow:0 2px 0 #131324}
+.btn.danger{background:linear-gradient(180deg,#f43f5e,#be123c);color:#fff;box-shadow:0 2px 0 #881337}
+.btn.blue{background:linear-gradient(180deg,#3b82f6,#1d4ed8);color:#fff;box-shadow:0 2px 0 #1e3a8a}
+#console{background:#05050c;color:#6ee7b7;font-family:'Menlo',monospace;font-size:11px;padding:10px;border-radius:8px;height:220px;overflow-y:auto;border:1px solid var(--border);line-height:1.5}
+#console .err{color:#ff6b6b}
+#console .warn{color:#fbbf24}
+#console .ok{color:#4ade80}
+#console .info{color:#38bdf8}
+#console .dim{color:#6a6a85}
+#console .sys{color:#a78bfa;font-weight:600}
+.app-row{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--panel2);border:1px solid var(--border);border-radius:6px;font-size:11px}
+.app-row strong{color:var(--accent2);font-size:11px}
+.app-row .meta{color:var(--dim);font-family:monospace;font-size:10px}
+.app-row .actions{display:flex;gap:6px}
+.app-row .actions button{padding:4px 10px;font-size:10px}
+.empty{color:var(--dim);font-size:11px;text-align:center;padding:20px}
 </style>
 </head>
 <body>
@@ -117,16 +69,17 @@
 <div class="device-wrapper">
   <div class="device">
     <div class="bezel-top">
-      <div style="display:flex;align-items:center;gap:6px">
-        <span class="hw-led" id="led-indicator"></span>
-        <span style="font-size:9px;color:#777;font-weight:700;letter-spacing:1px">KRYON·CORE</span>
+      <div class="bezel-left">
+        <span class="hw-led" id="led"></span>
+        <span class="hw-label">KRYON·CORE</span>
       </div>
-      <button class="exit-hw-btn" id="hw-exit-btn">✕ EXIT APP</button>
+      <button class="hw-exit" id="hw-exit-btn">✕ EXIT APP</button>
     </div>
     <div class="screen-frame">
       <canvas id="screen" width="240" height="320"></canvas>
+      <canvas id="overlay" width="240" height="320"></canvas>
     </div>
-    <div class="brand">ESP32-S3 · HARDWARE <span>OS</span></div>
+    <div class="brand">ESP32 · KRYONOS <span id="board-label">DevKitC-1</span></div>
     <div class="controls">
       <button class="ctrl-btn" data-key="up">▲ UP</button>
       <button class="ctrl-btn" data-key="sel">● SEL</button>
@@ -137,216 +90,160 @@
 
 <div class="panel">
   <div class="status-bar">
-    <div>State: <span id="state-label">LAUNCHER</span></div>
-    <div>WiFi: <span id="wifi-label">ONLINE</span></div>
-    <div>Storage: <span id="storage-status">IndexedDB</span></div>
-    <div>Engine: <span id="fps-label">60 fps</span></div>
+    <div class="st"><span class="st-label">State</span><span class="st-val" id="st-state">LAUNCHER</span></div>
+    <div class="st"><span class="st-label">WiFi</span><span class="st-val" id="st-wifi">ONLINE</span></div>
+    <div class="st"><span class="st-label">Free Heap</span><span class="st-val" id="st-heap">384 KB</span></div>
+    <div class="st"><span class="st-label">FPS</span><span class="st-val" id="st-fps">60</span></div>
   </div>
-  <h2>KryonOS Developer Environment & App Studio</h2>
-  <div class="panel-row">
-    <div class="panel-label">Application Name</div>
-    <input type="text" id="app-name" value="Touch Counter">
+
+  <div class="tabs">
+    <button class="tab active" data-tab="apps">Apps</button>
+    <button class="tab" data-tab="studio">Studio</button>
+    <button class="tab" data-tab="sim">Simulator</button>
+    <button class="tab" data-tab="console">Console</button>
   </div>
-  <div class="panel-row">
-    <div class="panel-label">Package Name (lowercase, dot-separated)</div>
-    <input type="text" id="app-pkg" value="com.kryon.counter">
+
+  <div class="tab-pane active" data-pane="apps">
+    <div class="panel-label">Installed Applications</div>
+    <div id="app-list" style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:6px"></div>
+    <div class="row">
+      <button class="btn blue" id="btn-refresh-apps">↻ Refresh</button>
+      <button class="btn sec" id="btn-seed-demo">+ Install Demo Apps</button>
+    </div>
   </div>
-  <div class="panel-row">
-    <div class="panel-label">Application Code (main.js)</div>
-    <textarea id="app-code" spellcheck="false"></textarea>
+
+  <div class="tab-pane" data-pane="studio">
+    <div class="row">
+      <label>Name</label>
+      <input type="text" id="app-name" value="Touch Counter" style="flex:1">
+      <label>Package</label>
+      <input type="text" id="app-pkg" value="com.kryon.counter" style="flex:1">
+    </div>
+    <textarea class="code-editor" id="app-code" spellcheck="false"></textarea>
+    <div class="row">
+      <button class="btn" id="btn-install">💾 Install</button>
+      <button class="btn blue" id="btn-run-live">▶ Run Live</button>
+      <button class="btn sec" id="btn-format">⟲ Format</button>
+    </div>
   </div>
-  <button class="btn" id="btn-install">💾 Install to Storage</button>
-  <button class="btn secondary" id="btn-run">▶ Run Live</button>
-  <button class="btn danger" id="btn-reset">⟲ Format Flash/SD</button>
-  <div id="console"></div>
+
+  <div class="tab-pane" data-pane="sim">
+    <div class="row">
+      <label>Board</label>
+      <select id="board-select">
+        <option value="esp32-s3-devkitc-1-n16r8">ESP32-S3 DevKitC-1 (240×320)</option>
+        <option value="m5stack-cardputer">M5Stack Cardputer (240×135)</option>
+        <option value="lilygo-t-hmi">LilyGO T-HMI (240×320)</option>
+        <option value="esp32-cyd-28">ESP32-CYD-28 (240×320)</option>
+        <option value="esp32doit-devkit-v1">ESP32 DevKit v1 (240×320)</option>
+      </select>
+    </div>
+    <div class="row">
+      <label>Time</label>
+      <input type="text" id="sim-time" value="UTC0" style="width:100px">
+      <label><input type="checkbox" id="sim-24h" checked> 24h</label>
+      <label><input type="checkbox" id="sim-wifi" checked> WiFi</label>
+    </div>
+    <div class="row">
+      <label>Network mode</label>
+      <select id="sim-weather">
+        <option value="online">Online (real fetch)</option>
+        <option value="offline">Offline (all fail)</option>
+        <option value="slow">Slow (3s delay)</option>
+      </select>
+    </div>
+    <div class="panel-label">Controls</div>
+    <div class="row">
+      <button class="btn sec" id="btn-reboot">⟳ Reboot</button>
+      <button class="btn sec" id="btn-launcher">⌂ Launcher</button>
+      <button class="btn sec" id="btn-show-touch">◱ Flash Outline</button>
+    </div>
+  </div>
+
+  <div class="tab-pane" data-pane="console">
+    <div id="console"></div>
+    <div class="row"><button class="btn sec" id="btn-clear-log">Clear</button></div>
+  </div>
 </div>
 
 <script>
-/* =========================================================
-   1. HARDWARE CONSTANTS & COLOR PALETTE
-   ========================================================= */
-const TFT_BLACK=0x0000, TFT_WHITE=0xFFFF, TFT_RED=0xF800;
-const TFT_GREEN=0x07E0, TFT_BLUE=0x001F, TFT_YELLOW=0xFFE0;
-const TFT_CYAN=0x07FF, TFT_MAGENTA=0xF81F, TFT_ORANGE=0xFD20;
-const TFT_DARKGREY=0x7BEF, TFT_LIGHTGREY=0xC618, TFT_PURPLE=0x780F, TFT_NAVY=0x000F;
+'use strict';
 
-const BLACK=TFT_BLACK, WHITE=TFT_WHITE, RED=TFT_RED, GREEN=TFT_GREEN;
-const BLUE=TFT_BLUE, YELLOW=TFT_YELLOW, CYAN=TFT_CYAN, MAGENTA=TFT_MAGENTA;
-const ORANGE=TFT_ORANGE, DARKGREY=TFT_DARKGREY, LIGHTGREY=TFT_LIGHTGREY;
-const PURPLE=TFT_PURPLE, NAVY=TFT_NAVY;
+/* ─── 1. CONSTANTS ────────────────────────────────────────────── */
+const TFT_BLACK=0x0000,TFT_WHITE=0xFFFF,TFT_RED=0xF800,TFT_GREEN=0x07E0;
+const TFT_BLUE=0x001F,TFT_YELLOW=0xFFE0,TFT_CYAN=0x07FF,TFT_MAGENTA=0xF81F;
+const TFT_ORANGE=0xFD20,TFT_DARKGREY=0x7BEF,TFT_LIGHTGREY=0xC618;
+const TFT_PURPLE=0x780F,TFT_NAVY=0x000F,TFT_GOLD=0xFEA0;
+const KRYONOS_VERSION="2.0.0";
+const KRYONOS_API_LEVEL=2;
+const S={LAUNCHER:0,SETTINGS:1,RUN_APP:2,INSTALLER:3,CALIBRATOR:4,WEB_APP:5,
+  SETTINGS_WIFI:6,SETTINGS_ABOUT:7,SETTINGS_APPS:8,SETTINGS_TIME:9,
+  SETTINGS_TIME_MANUAL:10,UPDATER_BOOT:11,UPDATER_MANUAL:12,APP_STORE:13,
+  HELP_CENTER:14,SETTINGS_WIFI_SAVED:15,KRYON_CLOUD:16,SETTINGS_PERMISSIONS:17};
 
-const C_BLACK=TFT_BLACK, C_WHITE=TFT_WHITE, C_RED=TFT_RED, C_GREEN=TFT_GREEN;
-const C_BLUE=TFT_BLUE, C_YELLOW=TFT_YELLOW, C_CYAN=TFT_CYAN, C_MAGENTA=TFT_MAGENTA;
-const C_ORANGE=TFT_ORANGE, C_DARKGREY=TFT_DARKGREY, C_PURPLE=TFT_PURPLE, C_NAVY=TFT_NAVY;
-
-const KRYONOS_VERSION = "2.0.0";
-const KRYONOS_API_LEVEL = 2;
-
-const STATE_LAUNCHER          = 0;
-const STATE_SETTINGS          = 1;
-const STATE_RUN_APP           = 2;
-const STATE_INSTALLER         = 3;
-const STATE_CALIBRATOR        = 4;
-const STATE_WEB_APP           = 5;
-const STATE_SETTINGS_WIFI     = 6;
-const STATE_SETTINGS_ABOUT    = 7;
-const STATE_SETTINGS_APPS     = 8;
-const STATE_SETTINGS_TIME     = 9;
-const STATE_SETTINGS_TIME_MANUAL = 10;
-const STATE_UPDATER_MANUAL    = 12;
-const STATE_APP_STORE         = 13;
-const STATE_HELP_CENTER       = 14;
-const STATE_SETTINGS_WIFI_SAVED = 15;
-const STATE_KRYON_CLOUD       = 16;
-const STATE_SETTINGS_PERMISSIONS= 17;
-
-const TL_DATUM=0, TC_DATUM=1, ML_DATUM=3, MC_DATUM=4;
-
-const consoleEl = document.getElementById('console');
-function log(msg, cls){
-  if (!consoleEl) return;
-  const d = document.createElement('div');
-  if (cls) d.className = cls;
-  d.textContent = '[' + new Date().toLocaleTimeString('en-GB', {hour12:false}) + '] ' + msg;
+/* ─── 2. UTILITIES ────────────────────────────────────────────── */
+const $=id=>document.getElementById(id);
+const consoleEl=$('console');
+function log(msg,cls){
+  const d=document.createElement('div');
+  if(cls)d.className=cls;
+  d.textContent=`[${new Date().toLocaleTimeString('en-GB',{hour12:false})}] ${msg}`;
   consoleEl.appendChild(d);
-  while (consoleEl.children.length > 250) consoleEl.removeChild(consoleEl.firstChild);
-  consoleEl.scrollTop = consoleEl.scrollHeight;
+  while(consoleEl.children.length>500)consoleEl.removeChild(consoleEl.firstChild);
+  consoleEl.scrollTop=consoleEl.scrollHeight;
 }
+const escapeRegex=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+const sleep=ms=>new Promise(r=>setTimeout(r,Math.max(0,ms|0)));
+const clamp=(v,a,b)=>v<a?a:(v>b?b:v);
 
-/* =========================================================
-   2. HARDWARE AUDIO & PWM SYNTHESIZER ENGINE
-   ========================================================= */
-class AudioPWM {
-  constructor(){
-    this.ctx = null;
-    this.oscillators = new Map();
-  }
-  _ensure(){
-    if (!this.ctx) {
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (AC) this.ctx = new AC();
-    }
-    if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume();
-    }
-  }
-  setTone(pin, freq, durationMs = 0){
-    try {
-      this._ensure();
-      if (!this.ctx) return;
-      this.stopTone(pin);
-      if (freq <= 0) return;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-      gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start();
-      this.oscillators.set(pin, { osc, gain });
-
-      if (durationMs > 0) {
-        setTimeout(() => this.stopTone(pin), durationMs);
-      }
-    } catch(e){}
-  }
-  stopTone(pin){
-    const it = this.oscillators.get(pin);
-    if (it) {
-      try {
-        it.gain.gain.setValueAtTime(0, this.ctx.currentTime);
-        it.osc.stop();
-        it.osc.disconnect();
-      } catch(e){}
-      this.oscillators.delete(pin);
-    }
-  }
-  reset(){
-    for (const pin of this.oscillators.keys()) {
-      this.stopTone(pin);
-    }
-  }
+/* ─── 3. AUDIO PWM ────────────────────────────────────────────── */
+class AudioPWM{
+  constructor(){this.ctx=null;this.oscs=new Map();}
+  _ensure(){if(!this.ctx){const AC=window.AudioContext||window.webkitAudioContext;if(AC)this.ctx=new AC();}if(this.ctx&&this.ctx.state==='suspended')this.ctx.resume();}
+  setTone(pin,freq,dur=0){try{this._ensure();if(!this.ctx)return;this.stopTone(pin);if(freq<=0)return;
+    const o=this.ctx.createOscillator(),g=this.ctx.createGain();
+    o.type='square';o.frequency.value=freq;g.gain.value=0.05;
+    o.connect(g);g.connect(this.ctx.destination);o.start();
+    this.oscs.set(pin,{osc:o,gain:g});if(dur>0)setTimeout(()=>this.stopTone(pin),dur);
+  }catch(e){}}
+  stopTone(pin){const it=this.oscs.get(pin);if(it){try{it.gain.gain.value=0;it.osc.stop();it.osc.disconnect();}catch(e){}this.oscs.delete(pin);}}
+  reset(){for(const p of [...this.oscs.keys()])this.stopTone(p);}
 }
-const audioHardware = new AudioPWM();
+const audioHW=new AudioPWM();
 
-/* =========================================================
-   3. PERSISTENT INDEXEDDB VFS (STORAGE ENGINE)
-   ========================================================= */
-class IndexedDB_VFS {
-  constructor(sim){
-    this.sim = sim;
-    this.dbName = 'KryonOS_Production_VFS_v5';
-    this.storeName = 'files';
-    this.db = null;
-    this.cache = new Map();
-  }
-
+/* ─── 4. VFS (IndexedDB-backed) ───────────────────────────────── */
+class VFS{
+  constructor(sim){this.sim=sim;this.dbName='KryonOS_VFS_v7';this.store='files';this.db=null;this.cache=new Map();}
   async init(){
-    return new Promise((resolve) => {
-      try {
-        const req = indexedDB.open(this.dbName, 1);
-        req.onupgradeneeded = (e) => {
-          const db = e.target.result;
-          if (!db.objectStoreNames.contains(this.storeName)) {
-            db.createObjectStore(this.storeName, { keyPath: 'path' });
-          }
-        };
-        req.onsuccess = async (e) => {
-          this.db = e.target.result;
-          await this._loadCache();
-          if (this.cache.size === 0) {
-            await this.seedDefaults();
-          }
-          resolve();
-        };
-        req.onerror = () => { this.seedDefaults(); resolve(); };
-      } catch(e) { this.seedDefaults(); resolve(); }
+    return new Promise(resolve=>{
+      try{
+        const req=indexedDB.open(this.dbName,1);
+        req.onupgradeneeded=e=>{const db=e.target.result;if(!db.objectStoreNames.contains(this.store))db.createObjectStore(this.store,{keyPath:'path'});};
+        req.onsuccess=async e=>{this.db=e.target.result;await this._load();if(this.cache.size===0)await this.seedDefaults();resolve();};
+        req.onerror=()=>{this.seedDefaults().then(resolve);};
+      }catch(e){this.seedDefaults().then(resolve);}
     });
   }
-
-  _loadCache(){
-    return new Promise((resolve) => {
-      if (!this.db) return resolve();
-      const tx = this.db.transaction(this.storeName, 'readonly');
-      const store = tx.objectStore(this.storeName);
-      const req = store.getAll();
-      req.onsuccess = () => {
-        this.cache.clear();
-        (req.result || []).forEach(it => this.cache.set(it.path, it));
-        resolve();
-      };
-      req.onerror = () => resolve();
-    });
-  }
-
+  _load(){return new Promise(resolve=>{
+    if(!this.db)return resolve();
+    const tx=this.db.transaction(this.store,'readonly');
+    const req=tx.objectStore(this.store).getAll();
+    req.onsuccess=()=>{this.cache.clear();(req.result||[]).forEach(it=>this.cache.set(it.path,it));resolve();};
+    req.onerror=()=>resolve();
+  });}
+  _norm(p){let c=String(p||'').replace(/\/+/g,'/');if(c.length>1&&c.endsWith('/'))c=c.slice(0,-1);if(!c.startsWith('/'))c='/'+c;return c;}
   async seedDefaults(){
-    const defs = [
-      { path: '/local', isDir: true },
-      { path: '/local/apps', isDir: true },
-      { path: '/local/system', isDir: true },
-      { path: '/sd', isDir: true },
-      { path: '/sd/apps', isDir: true }
-    ];
-    for (const d of defs) {
-      this._put(d.path, null, d.isDir, false);
-    }
-
-    // Default Demo Apps
-    const calcPkg = '/local/apps/com.kryon.calc';
-    this.mkdir(calcPkg);
-    this.writeTextFile(calcPkg + '/app.json', JSON.stringify({
-      name: "Calculator", packageName: "com.kryon.calc", version: "1.0.0", api: 1, author: "KryonTeam", description: "Standard utility calculator"
-    }, null, 2));
-    this.writeTextFile(calcPkg + '/main.js', `var bg = System.color(20,20,30);
-System.fillScreen(bg);
-System.setTextColor(WHITE, bg);
-System.drawString("Calculator App", 20, 30, 2);
-System.fillRoundRect(20, 100, 200, 40, 5, BLUE);
+    for(const d of ['/local','/local/apps','/local/system','/local/tmp_download','/sd','/sd/apps','/sd/system'])
+      this._put(d,null,true,false);
+    this._installDemo('com.kryon.calc',{name:'Calculator',packageName:'com.kryon.calc',version:'1.0.0',api:1,author:'KryonTeam',category:'Utility',type:'App',description:'Standard utility calculator.',permissions:[]},
+`// KryonOS Calculator Demo
+System.fillScreen(System.color(20,20,30));
+System.setTextColor(WHITE, System.color(20,20,30));
+System.drawString("Calculator", 55, 30, 4);
+System.fillRoundRect(20, 100, 200, 40, 6, BLUE);
 System.setTextColor(WHITE, BLUE);
-System.drawString("Tap Screen to Beep", 30, 112, 2);
-
-while(true) {
+System.drawString("Tap to beep", 70, 112, 2);
+while (true) {
   var t = System.getTouch();
   if (t.touched) {
     PWM.setTone(18, 1400, 100);
@@ -354,1745 +251,2010 @@ while(true) {
   }
   System.delay(40);
 }`);
-
-    const paintPkg = '/local/apps/com.kryon.paint';
-    this.mkdir(paintPkg);
-    this.writeTextFile(paintPkg + '/app.json', JSON.stringify({
-      name: "Canvas Paint", packageName: "com.kryon.paint", version: "1.0.0", api: 1, author: "KryonTeam", description: "Finger drawing app"
-    }, null, 2));
-    this.writeTextFile(paintPkg + '/main.js', `System.fillScreen(BLACK);
+    this._installDemo('com.kryon.paint',{name:'Canvas Paint',packageName:'com.kryon.paint',version:'1.0.0',api:1,author:'KryonTeam',category:'Utility',type:'App',description:'Finger drawing demo.',permissions:[]},
+`// KryonOS Paint Demo
+System.fillScreen(BLACK);
 System.setTextColor(YELLOW, BLACK);
-System.drawString("Draw with finger!", 10, 10, 2);
-while(true) {
+System.drawString("Draw with finger", 30, 10, 2);
+while (true) {
   var t = System.getTouch();
   if (t.touched && t.y > 40) {
     System.fillCircle(t.x, t.y, 4, CYAN);
   }
   System.delay(10);
 }`);
+    await this._persistAll();
   }
-
-  _put(path, content, isDir = false, notify = true){
-    const clean = path.replace(/\/+/g, '/');
-    const record = {
-      path: clean,
-      content: isDir ? null : String(content != null ? content : ''),
-      isDir,
-      size: isDir ? 0 : (content ? String(content).length : 0),
-      modified: Date.now()
-    };
-    this.cache.set(clean, record);
-    if (this.db) {
-      try {
-        const tx = this.db.transaction(this.storeName, 'readwrite');
-        tx.objectStore(this.storeName).put(record);
-      } catch(e){}
-    }
-    if (notify && this.sim) this.sim.onStorageChanged();
+  _installDemo(pkg,meta,code){
+    const dir='/local/apps/'+pkg;
+    this._put(dir,null,true,false);
+    this._put(dir+'/app.json',JSON.stringify(meta,null,2),false,false);
+    this._put(dir+'/main.js',code,false,false);
+  }
+  _persistAll(){if(!this.db)return Promise.resolve();return new Promise(resolve=>{
+    const tx=this.db.transaction(this.store,'readwrite');const store=tx.objectStore(this.store);
+    for(const it of this.cache.values())store.put(it);
+    tx.oncomplete=()=>resolve();tx.onerror=()=>resolve();
+  });}
+  _put(path,content,isDir=false,notify=true){
+    const clean=this._norm(path);
+    const rec={path:clean,content:isDir?null:String(content!=null?content:''),isDir,size:isDir?0:(content?String(content).length:0),modified:Date.now()};
+    this.cache.set(clean,rec);
+    if(this.db){try{const tx=this.db.transaction(this.store,'readwrite');tx.objectStore(this.store).put(rec);}catch(e){}}
+    if(notify&&this.sim)this.sim.onStorageChanged();
     return true;
   }
-
-  exists(p){ return this.cache.has(p.replace(/\/+/g, '/')); }
-  isDirectory(p){ const it = this.cache.get(p.replace(/\/+/g, '/')); return it ? it.isDir : false; }
-  isFile(p){ const it = this.cache.get(p.replace(/\/+/g, '/')); return it ? !it.isDir : false; }
-  readTextFile(p){
-    const it = this.cache.get(p.replace(/\/+/g, '/'));
-    return (it && !it.isDir) ? it.content : '';
-  }
-  writeTextFile(p, c){
-    if (!p) return false;
-    this._mkpar(p);
-    return this._put(p, c, false, true);
-  }
-  appendTextFile(p, c){
-    const cur = this.readTextFile(p);
-    return this.writeTextFile(p, cur + String(c));
-  }
-  mkdir(p){
-    const clean = p.replace(/\/+/g, '/');
-    if (this.cache.has(clean)) return true;
-    this._mkpar(clean);
-    return this._put(clean, null, true, true);
-  }
-  rmdir(p){ return this.deleteFile(p); }
-  deleteFile(p){
-    const clean = p.replace(/\/+/g, '/');
-    this.cache.delete(clean);
-    if (this.db) {
-      try {
-        const tx = this.db.transaction(this.storeName, 'readwrite');
-        tx.objectStore(this.storeName).delete(clean);
-      } catch(e){}
-    }
-    if (this.sim) this.sim.onStorageChanged();
+  exists(p){return this.cache.has(this._norm(p));}
+  isDir(p){const it=this.cache.get(this._norm(p));return it?it.isDir:false;}
+  isFile(p){const it=this.cache.get(this._norm(p));return it?!it.isDir:false;}
+  read(p){const it=this.cache.get(this._norm(p));return (it&&!it.isDir)?it.content:'';}
+  write(p,c){if(!p)return false;this._mkparent(p);return this._put(p,c,false,true);}
+  append(p,c){return this.write(p,this.read(p)+String(c));}
+  mkdir(p){const clean=this._norm(p);if(this.cache.has(clean))return true;this._mkparent(clean);return this._put(clean,null,true,true);}
+  remove(p){const clean=this._norm(p);this.cache.delete(clean);
+    for(const k of [...this.cache.keys()])if(k.startsWith(clean+'/'))this.cache.delete(k);
+    if(this.db){try{const tx=this.db.transaction(this.store,'readwrite');const store=tx.objectStore(this.store);store.delete(clean);for(const k of [...this.cache.keys()])if(k.startsWith(clean+'/'))store.delete(k);}catch(e){}}
+    if(this.sim)this.sim.onStorageChanged();
     return true;
   }
-  renameFile(from, to){
-    const f = from.replace(/\/+/g, '/');
-    const t = to.replace(/\/+/g, '/');
-    const it = this.cache.get(f);
-    if (!it) return false;
-    this.deleteFile(f);
-    return this._put(t, it.content, it.isDir, true);
-  }
-  listDir(p){
-    const clean = p.replace(/\/+/g, '/');
-    const pre = clean.endsWith('/') ? clean : clean + '/';
-    const out = [];
-    for (const [k] of this.cache.entries()){
-      if (k.startsWith(pre) && k !== clean){
-        const sub = k.substring(pre.length);
-        if (!sub.includes('/')) out.push(k);
-      }
-    }
-    return out;
-  }
-  listDirFull(p){
-    const clean = p.replace(/\/+/g, '/');
-    const pre = clean.endsWith('/') ? clean : clean + '/';
-    const out = [];
-    for (const [k, it] of this.cache.entries()){
-      if (k.startsWith(pre) && k !== clean){
-        const sub = k.substring(pre.length);
-        if (!sub.includes('/')) out.push({ name: sub, path: k, isDir: it.isDir });
-      }
-    }
-    return out;
-  }
-  getFileSize(p){
-    const it = this.cache.get(p.replace(/\/+/g, '/'));
-    return it ? it.size : 0;
-  }
-  getTotalSpace(drive){ return 16 * 1024 * 1024; }
-  getUsedSpace(drive){
-    let total = 0;
-    for (const it of this.cache.values()) total += it.size;
-    return total;
-  }
-  getFreeSpace(drive){ return this.getTotalSpace(drive) - this.getUsedSpace(drive); }
-  _mkpar(p){
-    const parts = p.split('/').filter(Boolean);
-    let cur = '';
-    for (let i = 0; i < parts.length - 1; i++){
-      cur += '/' + parts[i];
-      if (!this.cache.has(cur)) {
-        this._put(cur, null, true, false);
-      }
-    }
-  }
-  async reset(){
-    if (this.db) {
-      const tx = this.db.transaction(this.storeName, 'readwrite');
-      tx.objectStore(this.storeName).clear();
-    }
-    this.cache.clear();
-    await this.seedDefaults();
-    log('Storage formatted cleanly.', 'warn');
-  }
+  rename(from,to){const f=this._norm(from),t=this._norm(to);const it=this.cache.get(f);if(!it)return false;const content=it.content,isDir=it.isDir;this.remove(f);return this._put(t,content,isDir,true);}
+  listDir(p){const clean=this._norm(p);const pre=clean.endsWith('/')?clean:clean+'/';const out=[];
+    for(const k of this.cache.keys()){if(k.startsWith(pre)&&k!==clean){const sub=k.substring(pre.length);if(!sub.includes('/'))out.push(k);}}return out;}
+  listDirFull(p){const clean=this._norm(p);const pre=clean.endsWith('/')?clean:clean+'/';const out=[];
+    for(const [k,it] of this.cache.entries()){if(k.startsWith(pre)&&k!==clean){const sub=k.substring(pre.length);if(!sub.includes('/'))out.push({name:sub,path:k,isDir:it.isDir,size:it.size});}}return out;}
+  size(p){const it=this.cache.get(this._norm(p));return it?it.size:0;}
+  totalSpace(){return 16*1024*1024;}
+  usedSpace(){let t=0;for(const it of this.cache.values())t+=it.size;return t;}
+  freeSpace(){return this.totalSpace()-this.usedSpace();}
+  _mkparent(p){const parts=this._norm(p).split('/').filter(Boolean);let cur='';for(let i=0;i<parts.length-1;i++){cur+='/'+parts[i];if(!this.cache.has(cur))this._put(cur,null,true,false);}}
+  async reset(){if(this.db){const tx=this.db.transaction(this.store,'readwrite');tx.objectStore(this.store).clear();}this.cache.clear();await this.seedDefaults();log('Flash formatted, defaults restored.','warn');}
+  md5(p){const content=this.read(p);let h=0x811c9dc5;for(let i=0;i<content.length;i++){h^=content.charCodeAt(i);h=(h*0x01000193)>>>0;}const seed=h.toString(16).padStart(8,'0');return (seed+seed+seed+seed).slice(0,32);}
 }
 
-/* =========================================================
-   4. TFT_eSPI GRAPHICS ENGINE (Canvas 2D Display Pipeline)
-   ========================================================= */
-class TFTDisplay {
-  constructor(cv){
-    this.canvas = cv;
-    this.ctx = cv.getContext('2d', {alpha:false});
-    this.ctx.imageSmoothingEnabled = false;
-    this.W = cv.width; this.H = cv.height;
-    this.fgColor = '#fff'; this.bgColor = null;
-    this.textSize = 1; this.textDatum = TL_DATUM;
-    this.activeSprite = null;
-    this.clear();
+/* ─── 5. TFT DISPLAY ──────────────────────────────────────────── */
+class TFTDisplay{
+  constructor(canvas){
+    this.canvas=canvas;this.ctx=canvas.getContext('2d',{alpha:false});
+    this.ctx.imageSmoothingEnabled=false;
+    this.W=canvas.width;this.H=canvas.height;
+    this.fg='#fff';this.bg=null;this.size=1;this.datum=0;
+    this.activeSprite=null;this.clear();
   }
-  clear(){ this.ctx.fillStyle = '#000'; this.ctx.fillRect(0, 0, this.W, this.H); }
-  static c565(c){
-    const r = ((c >> 11) & 0x1F) * 255 / 31 | 0;
-    const g = ((c >> 5) & 0x3F) * 255 / 63 | 0;
-    const b = (c & 0x1F) * 255 / 31 | 0;
-    return `rgb(${r},${g},${b})`;
-  }
-  static FONTS = { 1: 9, 2: 14, 4: 26, 6: 44, 7: 44, 8: 56 };
-
-  getTargetCtx(){
-    return this.activeSprite ? this.activeSprite.ctx : this.ctx;
-  }
-
-  fillScreen(c){
-    const ctx = this.getTargetCtx();
-    ctx.fillStyle = TFTDisplay.c565(c);
-    ctx.fillRect(0, 0, this.W, this.H);
-  }
-  fillRect(x,y,w,h,c){
-    if (w<=0||h<=0) return;
-    const ctx = this.getTargetCtx();
-    ctx.fillStyle = TFTDisplay.c565(c);
-    ctx.fillRect(x,y,w,h);
-  }
-  drawRect(x,y,w,h,c){
-    const ctx = this.getTargetCtx();
-    ctx.strokeStyle = TFTDisplay.c565(c);
-    ctx.lineWidth = 1;
-    ctx.strokeRect(x+.5, y+.5, Math.max(0,w-1), Math.max(0,h-1));
-  }
-  drawLine(x0,y0,x1,y1,c){
-    const ctx = this.getTargetCtx();
-    ctx.strokeStyle = TFTDisplay.c565(c);
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(x0+.5, y0+.5);
-    ctx.lineTo(x1+.5, y1+.5);
-    ctx.stroke();
-  }
-  drawFastHLine(x,y,w,c){ this.drawLine(x, y, x + w - 1, y, c); }
-  drawFastVLine(x,y,h,c){ this.drawLine(x, y, x, y + h - 1, c); }
-  drawPixel(x,y,c){
-    const ctx = this.getTargetCtx();
-    ctx.fillStyle = TFTDisplay.c565(c);
-    ctx.fillRect(x, y, 1, 1);
-  }
-  drawCircle(x,y,r,c){
-    const ctx = this.getTargetCtx();
-    ctx.strokeStyle = TFTDisplay.c565(c);
-    ctx.beginPath(); ctx.arc(x, y, Math.abs(r), 0, Math.PI*2); ctx.stroke();
-  }
-  fillCircle(x,y,r,c){
-    const ctx = this.getTargetCtx();
-    ctx.fillStyle = TFTDisplay.c565(c);
-    ctx.beginPath(); ctx.arc(x, y, Math.abs(r), 0, Math.PI*2); ctx.fill();
-  }
-  drawTriangle(x0,y0,x1,y1,x2,y2,c){
-    this.drawLine(x0,y0,x1,y1,c);
-    this.drawLine(x1,y1,x2,y2,c);
-    this.drawLine(x2,y2,x0,y0,c);
-  }
-  fillTriangle(x0,y0,x1,y1,x2,y2,c){
-    const ctx = this.getTargetCtx();
-    ctx.fillStyle = TFTDisplay.c565(c);
-    ctx.beginPath();
-    ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.lineTo(x2,y2);
-    ctx.fill();
-  }
-  _rr(ctx,x,y,w,h,r){
-    r = Math.min(r, w/2, h/2);
-    ctx.beginPath();
-    ctx.moveTo(x+r, y);
-    ctx.arcTo(x+w, y, x+w, y+h, r);
-    ctx.arcTo(x+w, y+h, x, y+h, r);
-    ctx.arcTo(x, y+h, x, y, r);
-    ctx.arcTo(x, y, x+w, y, r);
-    ctx.closePath();
-  }
-  drawRoundRect(x,y,w,h,r,c){
-    const ctx = this.getTargetCtx();
-    ctx.strokeStyle = TFTDisplay.c565(c);
-    ctx.lineWidth = 1;
-    this._rr(ctx, x+.5, y+.5, Math.max(0,w-1), Math.max(0,h-1), r);
-    ctx.stroke();
-  }
-  fillRoundRect(x,y,w,h,r,c){
-    if (w<=0||h<=0) return;
-    const ctx = this.getTargetCtx();
-    ctx.fillStyle = TFTDisplay.c565(c);
-    this._rr(ctx, x, y, w, h, r);
-    ctx.fill();
-  }
-  setTextColor(fg,bg){
-    this.fgColor = TFTDisplay.c565(fg);
-    this.bgColor = (bg != null) ? TFTDisplay.c565(bg) : null;
-  }
-  setTextDatum(d){ this.textDatum = d; }
-  setTextSize(s){ this.textSize = Math.max(1, s|0); }
+  clear(){this.ctx.fillStyle='#000';this.ctx.fillRect(0,0,this.W,this.H);}
+  static c565(c){const r=((c>>11)&0x1F)*255/31|0,g=((c>>5)&0x3F)*255/63|0,b=(c&0x1F)*255/31|0;return `rgb(${r},${g},${b})`;}
+  _t(){return this.activeSprite?this.activeSprite.ctx:this.ctx;}
+  _w(){return this.activeSprite?this.activeSprite.canvas.width:this.W;}
+  _h(){return this.activeSprite?this.activeSprite.canvas.height:this.H;}
+  fillScreen(c){const x=this._t();x.fillStyle=TFTDisplay.c565(c);x.fillRect(0,0,this._w(),this._h());}
+  fillRect(x,y,w,h,c){if(w<=0||h<=0)return;const t=this._t();t.fillStyle=TFTDisplay.c565(c);t.fillRect(x,y,w,h);}
+  drawRect(x,y,w,h,c){const t=this._t();t.strokeStyle=TFTDisplay.c565(c);t.lineWidth=1;t.strokeRect(x+.5,y+.5,Math.max(0,w-1),Math.max(0,h-1));}
+  drawLine(x0,y0,x1,y1,c){const t=this._t();t.strokeStyle=TFTDisplay.c565(c);t.lineWidth=1;t.beginPath();t.moveTo(x0+.5,y0+.5);t.lineTo(x1+.5,y1+.5);t.stroke();}
+  drawFastHLine(x,y,w,c){this.drawLine(x,y,x+w-1,y,c);}
+  drawFastVLine(x,y,h,c){this.drawLine(x,y,x,y+h-1,c);}
+  drawPixel(x,y,c){const t=this._t();t.fillStyle=TFTDisplay.c565(c);t.fillRect(x,y,1,1);}
+  drawCircle(x,y,r,c){const t=this._t();t.strokeStyle=TFTDisplay.c565(c);t.beginPath();t.arc(x,y,Math.abs(r),0,Math.PI*2);t.stroke();}
+  fillCircle(x,y,r,c){const t=this._t();t.fillStyle=TFTDisplay.c565(c);t.beginPath();t.arc(x,y,Math.abs(r),0,Math.PI*2);t.fill();}
+  drawTriangle(x0,y0,x1,y1,x2,y2,c){this.drawLine(x0,y0,x1,y1,c);this.drawLine(x1,y1,x2,y2,c);this.drawLine(x2,y2,x0,y0,c);}
+  fillTriangle(x0,y0,x1,y1,x2,y2,c){const t=this._t();t.fillStyle=TFTDisplay.c565(c);t.beginPath();t.moveTo(x0,y0);t.lineTo(x1,y1);t.lineTo(x2,y2);t.closePath();t.fill();}
+  _rr(t,x,y,w,h,r){r=Math.min(r,w/2,h/2);t.beginPath();t.moveTo(x+r,y);t.arcTo(x+w,y,x+w,y+h,r);t.arcTo(x+w,y+h,x,y+h,r);t.arcTo(x,y+h,x,y,r);t.arcTo(x,y,x+w,y,r);t.closePath();}
+  drawRoundRect(x,y,w,h,r,c){const t=this._t();t.strokeStyle=TFTDisplay.c565(c);t.lineWidth=1;this._rr(t,x+.5,y+.5,Math.max(0,w-1),Math.max(0,h-1),r);t.stroke();}
+  fillRoundRect(x,y,w,h,r,c){if(w<=0||h<=0)return;const t=this._t();t.fillStyle=TFTDisplay.c565(c);this._rr(t,x,y,w,h,r);t.fill();}
+  setTextColor(fg,bg){this.fg=TFTDisplay.c565(fg);this.bg=(bg!=null)?TFTDisplay.c565(bg):null;}
+  setTextDatum(d){this.datum=d;}
+  setTextSize(s){this.size=Math.max(1,s|0);}
   drawString(str,x,y,font=2){
-    const ctx = this.getTargetCtx();
-    const base = TFTDisplay.FONTS[font] || 14;
-    const sz = Math.max(6, Math.floor(base * this.textSize));
-    ctx.font = `bold ${sz}px "Courier New",monospace`;
-    str = String(str != null ? str : '');
-    const w = ctx.measureText(str).width;
+    const t=this._t();
+    const base=({1:9,2:14,4:26,6:44,7:44,8:56})[font]||14;
+    const sz=Math.max(6,Math.floor(base*this.size));
+    t.font=`bold ${sz}px "Courier New",monospace`;
+    str=String(str!=null?str:'');
+    const w=t.measureText(str).width;
+    let rx=x,ry=y;
+    if(this.datum===1){rx=x-w/2;}
+    else if(this.datum===4){rx=x-w/2;ry=y-sz/2;}
+    else if(this.datum===3){ry=y-sz/2;}
+    t.textBaseline='top';t.textAlign='left';
+    if(this.bg){t.fillStyle=this.bg;t.fillRect(rx,ry,w,sz);}
+    t.fillStyle=this.fg;t.fillText(str,rx,ry);
+  }
+  color(r,g,b){r=clamp(r|0,0,255);g=clamp(g|0,0,255);b=clamp(b|0,0,255);return ((r&0xF8)<<8)|((g&0xFC)<<3)|(b>>3);}
+}
+class VirtualSprite{
+  constructor(w,h){
+    this.canvas=document.createElement('canvas');
+    this.canvas.width=Math.max(1,w|0);this.canvas.height=Math.max(1,h|0);
+    this.ctx=this.canvas.getContext('2d',{alpha:false});
+    this.ctx.imageSmoothingEnabled=false;
+    this.fill(0x0000);
+  }
+  fill(c){this.ctx.fillStyle=TFTDisplay.c565(c);this.ctx.fillRect(0,0,this.canvas.width,this.canvas.height);}
+}
 
-    let rx = x, ry = y;
-    if (this.textDatum === MC_DATUM) { rx = x - w / 2; ry = y - sz / 2; }
-    else if (this.textDatum === TC_DATUM) { rx = x - w / 2; ry = y; }
-    else if (this.textDatum === ML_DATUM) { rx = x; ry = y - sz / 2; }
-
-    ctx.textBaseline = 'top';
-    ctx.textAlign = 'left';
-
-    if (this.bgColor) {
-      ctx.fillStyle = this.bgColor;
-      ctx.fillRect(rx, ry, w, sz);
+/* ─── 6. KRYON3D ──────────────────────────────────────────────── */
+class Kryon3DEngine{
+  constructor(){this.reset();}
+  reset(){this.sprite=null;this.directDraw=false;this.vpX=0;this.vpY=0;this.vpW=0;this.vpH=0;
+    this.camPos=[0,0,-5];this.camTarget=[0,0,0];this.camFov=60;
+    this.lightDir=[0.577,-0.577,0.577];this.lightAmbient=0.3;this.lightDiffuse=0.7;
+    this.fog={enabled:false,color:0x0000,near:5,far:20};}
+  begin(w,h){this.end();this.sprite=new VirtualSprite(w,h);this.vpX=0;this.vpY=0;this.vpW=w;this.vpH=h;return true;}
+  clear(c=0){if(this.sprite)this.sprite.fill(c);}
+  end(){this.sprite=null;}
+  setViewport(x,y,w,h){this.vpX=x;this.vpY=y;this.vpW=w;this.vpH=h;}
+  setCamera(px,py,pz,tx,ty,tz,fov){this.camPos=[px,py,pz];this.camTarget=[tx,ty,tz];if(fov!=null)this.camFov=fov;}
+  setLight(lx,ly,lz,amb,dif){const l=Math.hypot(lx,ly,lz);if(l>1e-4)this.lightDir=[lx/l,ly/l,lz/l];if(amb!=null)this.lightAmbient=amb;if(dif!=null)this.lightDiffuse=dif;}
+  setFog(e,c,n,f){this.fog.enabled=!!e;if(c!=null)this.fog.color=c;if(n!=null)this.fog.near=n;if(f!=null)this.fog.far=f;}
+  project(wx,wy,wz){
+    const [cx,cy,cz]=this.camPos,[tx,ty,tz]=this.camTarget;
+    let fx=tx-cx,fy=ty-cy,fz=tz-cz;
+    const fl=Math.hypot(fx,fy,fz);
+    if(fl<1e-4){fx=0;fy=0;fz=1;}else{fx/=fl;fy/=fl;fz/=fl;}
+    let rx=fy*0-fz*1,ry=fz*0-fx*0,rz=fx*1-fy*0;
+    const rl=Math.hypot(rx,ry,rz);
+    if(rl<1e-4){rx=1;ry=0;rz=0;}else{rx/=rl;ry/=rl;rz/=rl;}
+    const ux=ry*fz-rz*fy,uy=rz*fx-rx*fz,uz=rx*fy-ry*fx;
+    const dx=wx-cx,dy=wy-cy,dz=wz-cz;
+    const ecx=dx*rx+dy*ry+dz*rz,ecy=dx*ux+dy*uy+dz*uz,ecz=dx*fx+dy*fy+dz*fz;
+    if(ecz<=0.05)return null;
+    const tanHalf=Math.tan(this.camFov*0.5*Math.PI/180)||0.001;
+    const scale=(this.vpW*0.5)/tanHalf;
+    return {x:(ecx/ecz)*scale+this.vpW*0.5+this.vpX,y:-(ecy/ecz)*scale+this.vpH*0.5+this.vpY,z:ecz};
+  }
+  _shade(base,nx,ny,nz){
+    const [lx,ly,lz]=this.lightDir;
+    let dot=nx*lx+ny*ly+nz*lz;if(dot<0)dot=0;
+    let i=this.lightAmbient+this.lightDiffuse*dot;i=clamp(i,0,1);
+    const r5=(base>>11)&0x1F,g6=(base>>5)&0x3F,b5=base&0x1F;
+    const r8=(r5*527+23)>>6,g8=(g6*259+33)>>6,b8=(b5*527+23)>>6;
+    return (((r8*i)|0)&0xF8)<<8|(((g8*i)|0)&0xFC)<<3|(((b8*i)|0)>>3);
+  }
+  _fog(c,z){
+    if(!this.fog.enabled)return c;
+    const f=clamp((z-this.fog.near)/(this.fog.far-this.fog.near),0,1);
+    if(f<=0)return c;
+    const c1={r:(c>>11&0x1F)*255/31|0,g:(c>>5&0x3F)*255/63|0,b:(c&0x1F)*255/31|0};
+    const c2={r:(this.fog.color>>11&0x1F)*255/31|0,g:(this.fog.color>>5&0x3F)*255/63|0,b:(this.fog.color&0x1F)*255/31|0};
+    return (((c1.r*(1-f)+c2.r*f)|0)&0xF8)<<8|(((c1.g*(1-f)+c2.g*f)|0)&0xFC)<<3|(((c1.b*(1-f)+c2.b*f)|0)>>3);
+  }
+  drawLine(x0,y0,z0,x1,y1,z1,c){
+    if(!this.sprite)return;
+    const p0=this.project(x0,y0,z0),p1=this.project(x1,y1,z1);
+    if(!p0||!p1)return;
+    const ctx=this.sprite.ctx;
+    ctx.strokeStyle=TFTDisplay.c565(c);ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(p0.x,p0.y);ctx.lineTo(p1.x,p1.y);ctx.stroke();
+  }
+  drawTriangle(x0,y0,z0,x1,y1,z1,x2,y2,z2,c){this.drawLine(x0,y0,z0,x1,y1,z1,c);this.drawLine(x1,y1,z1,x2,y2,z2,c);this.drawLine(x2,y2,z2,x0,y0,z0,c);}
+  fillTriangle(x0,y0,z0,x1,y1,z1,x2,y2,z2,c,lighting=true){
+    if(!this.sprite)return;
+    const v01=[x1-x0,y1-y0,z1-z0],v02=[x2-x0,y2-y0,z2-z0];
+    let nx=v01[1]*v02[2]-v01[2]*v02[1],ny=v01[2]*v02[0]-v01[0]*v02[2],nz=v01[0]*v02[1]-v01[1]*v02[0];
+    const nl=Math.hypot(nx,ny,nz);if(nl<1e-4)return;nx/=nl;ny/=nl;nz/=nl;
+    const vdx=this.camPos[0]-x0,vdy=this.camPos[1]-y0,vdz=this.camPos[2]-z0;
+    if(nx*vdx+ny*vdy+nz*vdz<=0)return;
+    const p0=this.project(x0,y0,z0),p1=this.project(x1,y1,z1),p2=this.project(x2,y2,z2);
+    if(!p0||!p1||!p2)return;
+    let col=c;if(lighting)col=this._shade(c,nx,ny,nz);
+    col=this._fog(col,(p0.z+p1.z+p2.z)/3);
+    const ctx=this.sprite.ctx;
+    ctx.fillStyle=TFTDisplay.c565(col);
+    ctx.beginPath();ctx.moveTo(p0.x,p0.y);ctx.lineTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);ctx.closePath();ctx.fill();
+  }
+  drawCube(cx,cy,cz,sx,sy,sz,rx,ry,rz,c,lighting=true){
+    const hx=sx/2,hy=sy/2,hz=sz/2;
+    const v=[[-hx,-hy,-hz],[hx,-hy,-hz],[hx,hy,-hz],[-hx,hy,-hz],[-hx,-hy,hz],[hx,-hy,hz],[hx,hy,hz],[-hx,hy,hz]];
+    const srx=Math.sin(rx),crx=Math.cos(rx),sry=Math.sin(ry),cry=Math.cos(ry),srz=Math.sin(rz),crz=Math.cos(rz);
+    const w=v.map(([x,y,z])=>{
+      const y1=y*crx-z*srx,z1=y*srx+z*crx;
+      const x2=x*cry+z1*sry,z2=-x*sry+z1*cry;
+      const x3=x2*crz-y1*srz,y3=x2*srz+y1*crz;
+      return [cx+x3,cy+y3,cz+z2];
+    });
+    const faces=[[0,1,2],[0,2,3],[5,4,7],[5,7,6],[4,0,3],[4,3,7],[1,5,6],[1,6,2],[3,2,6],[3,6,7],[4,5,1],[4,1,0]];
+    for(const [a,b,cc] of faces)
+      this.fillTriangle(w[a][0],w[a][1],w[a][2],w[b][0],w[b][1],w[b][2],w[cc][0],w[cc][1],w[cc][2],c,lighting);
+  }
+  drawBillboard(x,y,z,w,h,c){
+    if(!this.sprite)return;
+    const p=this.project(x,y,z);if(!p)return;
+    const tanHalf=Math.tan(this.camFov*0.5*Math.PI/180)||0.001;
+    const scale=(this.vpW*0.5)/tanHalf;
+    const sw=(w/p.z)*scale,sh=(h/p.z)*scale;
+    if(sw<=0||sh<=0)return;
+    const ctx=this.sprite.ctx;
+    ctx.fillStyle=TFTDisplay.c565(c);
+    ctx.fillRect(p.x-sw/2,p.y-sh/2,sw,sh);
+  }
+  drawMesh(verts,faces,mat,c,lighting=true){
+    if(!this.sprite||!Array.isArray(verts)||!Array.isArray(faces))return;
+    const m=mat||[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1];
+    const tv=[];
+    for(let i=0;i+2<verts.length;i+=3){
+      const x=verts[i],y=verts[i+1],z=verts[i+2];
+      tv.push([x*m[0]+y*m[4]+z*m[8]+m[12],x*m[1]+y*m[5]+z*m[9]+m[13],x*m[2]+y*m[6]+z*m[10]+m[14]]);
     }
-    ctx.fillStyle = this.fgColor;
-    ctx.fillText(str, rx, ry);
+    for(const face of faces){
+      if(!Array.isArray(face)||face.length<3)continue;
+      const [i0,i1,i2]=face;
+      if(!tv[i0]||!tv[i1]||!tv[i2])continue;
+      const fc=(face.length>=4&&typeof face[3]==='number')?face[3]:c;
+      this.fillTriangle(tv[i0][0],tv[i0][1],tv[i0][2],tv[i1][0],tv[i1][1],tv[i1][2],tv[i2][0],tv[i2][1],tv[i2][2],fc,lighting);
+    }
   }
-  color(r,g,b){
-    r = Math.max(0, Math.min(255, r|0));
-    g = Math.max(0, Math.min(255, g|0));
-    b = Math.max(0, Math.min(255, b|0));
-    return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
-  }
+  getWidth(){return this.sprite?this.sprite.canvas.width:0;}
+  getHeight(){return this.sprite?this.sprite.canvas.height:0;}
+  directDraw(v){if(v!=null)this.directDraw=!!v;return this.directDraw;}
 }
 
-class VirtualSprite {
-  constructor(w, h){
-    this.w = w; this.h = h;
-    this.canvas = document.createElement('canvas');
-    this.canvas.width = w; this.canvas.height = h;
-    this.ctx = this.canvas.getContext('2d', {alpha:false});
-    this.ctx.imageSmoothingEnabled = false;
-    this.fillScreen(0x0000);
-  }
-  fillScreen(c){
-    this.ctx.fillStyle = TFTDisplay.c565(c);
-    this.ctx.fillRect(0, 0, this.w, this.h);
-  }
-}
-
-/* =========================================================
-   5. NOTIFICATION OVERLAY (Buffered Slide In/Out)
-   ========================================================= */
-class NotificationOverlay {
+/* ─── 7. NOTIFICATION OVERLAY ─────────────────────────────────── */
+class NotificationOverlay{
   constructor(sim){
-    this.sim = sim;
-    this.queue = [];
-    this.bgData = null;
-    this.bgCaptured = false;
-    this.nextId = 1;
-    this.ANIM_MS = 180;
+    this.sim=sim;this.queue=[];this.nextId=1;
+    this.ANIM=180;this.REST=8;this.HIDDEN=-44;
+    this.CX=8;this.CW=224;this.CH=42;this.CR=6;
   }
-
-  post(title, message, iconStr = 'info', durationMs = 3000){
-    const id = this.nextId++;
-    let iconType = 'info';
-    const s = String(iconStr).toLowerCase();
-    if (s.includes('warn')) iconType = 'warn';
-    else if (s.includes('err') || s.includes('danger')) iconType = 'error';
-    else if (s.includes('succ') || s.includes('ok')) iconType = 'success';
-
-    const notif = {
-      id,
-      title: String(title || 'Notification').substring(0, 24),
-      message: String(message || '').substring(0, 48),
-      iconType,
-      durationMs: Math.max(500, Math.min(15000, durationMs || 3000)),
-      state: 'SLIDE_IN',
-      currentY: -44,
-      animStartTime: performance.now(),
-      displayStartTime: 0
-    };
-
-    this.queue.push(notif);
-    log(`[Notify #${id}] ${notif.title}: ${notif.message}`, 'ok');
+  post(title,message,icon='info',dur=3000){
+    const id=this.nextId++;
+    let t='info';const s=String(icon).toLowerCase();
+    if(s.includes('warn'))t='warn';
+    else if(s.includes('err')||s.includes('danger'))t='error';
+    else if(s.includes('succ')||s.includes('ok'))t='success';
+    this.queue.push({id,title:String(title||'Notification').substring(0,24),message:String(message||'').substring(0,48),iconType:t,durationMs:clamp(dur||3000,500,15000),state:'SLIDE_IN',currentY:this.HIDDEN,animStart:performance.now(),displayStart:0});
+    log(`[Notify #${id}] ${title}: ${message}`,'ok');
     return id;
   }
-
   dismiss(id){
-    if (this.queue.length === 0) return false;
-    const idx = this.queue.findIndex(n => n.id === id);
-    if (idx === -1) return false;
-    if (idx === 0){
-      if (this.queue[0].state !== 'SLIDE_OUT'){
-        this.queue[0].state = 'SLIDE_OUT';
-        this.queue[0].animStartTime = performance.now();
-      }
-    } else {
-      this.queue.splice(idx, 1);
-    }
+    if(!this.queue.length)return false;
+    const i=this.queue.findIndex(n=>n.id===id);
+    if(i===-1)return false;
+    if(i===0){if(this.queue[0].state!=='SLIDE_OUT'){this.queue[0].state='SLIDE_OUT';this.queue[0].animStart=performance.now();}}
+    else this.queue.splice(i,1);
     return true;
   }
-
-  clearAll(){
-    this.restoreBg();
-    this.queue = [];
-  }
-
-  captureBg(){
-    if (this.bgCaptured) return;
-    const ctx = this.sim.disp.ctx;
-    this.bgData = ctx.getImageData(0, 0, 240, 64);
-    this.bgCaptured = true;
-  }
-
-  restoreBg(){
-    if (this.bgCaptured && this.bgData){
-      this.sim.disp.ctx.putImageData(this.bgData, 0, 0);
-      this.bgCaptured = false;
-      this.bgData = null;
-    }
-  }
-
-  updateAndRender(){
-    if (this.queue.length === 0) return;
-
-    if (!this.bgCaptured){
-      this.captureBg();
-    }
-
-    const item = this.queue[0];
-    const now = performance.now();
-    const RESTING_Y = 8;
-    const HIDDEN_Y = -44;
-    const CARD_X = 8, CARD_W = 224, CARD_H = 42, CARD_R = 6;
-
-    let targetY = item.currentY;
-
-    if (item.state === 'SLIDE_IN'){
-      const elapsed = now - item.animStartTime;
-      if (elapsed >= this.ANIM_MS){
-        targetY = RESTING_Y;
-        item.state = 'DISPLAYING';
-        item.displayStartTime = now;
-      } else {
-        const t = elapsed / this.ANIM_MS;
-        const ease = 1 - Math.pow(1 - t, 3);
-        targetY = HIDDEN_Y + (RESTING_Y - HIDDEN_Y) * ease;
-      }
-    } else if (item.state === 'DISPLAYING'){
-      targetY = RESTING_Y;
-      if (now - item.displayStartTime >= item.durationMs){
-        item.state = 'SLIDE_OUT';
-        item.animStartTime = now;
-      }
-    } else if (item.state === 'SLIDE_OUT'){
-      const elapsed = now - item.animStartTime;
-      if (elapsed >= this.ANIM_MS){
-        this.restoreBg();
+  clearAll(){this.queue=[];this.render();}
+  render(){
+    const oc=this.sim.overlayCtx;
+    oc.clearRect(0,0,this.sim.overlayCanvas.width,this.sim.overlayCanvas.height);
+    if(!this.queue.length)return;
+    const it=this.queue[0];const now=performance.now();let y=it.currentY;
+    if(it.state==='SLIDE_IN'){
+      const e=now-it.animStart;
+      if(e>=this.ANIM){y=this.REST;it.state='DISPLAYING';it.displayStart=now;}
+      else{const t=e/this.ANIM,ea=1-Math.pow(1-t,3);y=this.HIDDEN+(this.REST-this.HIDDEN)*ea;}
+    }else if(it.state==='DISPLAYING'){
+      y=this.REST;
+      if(now-it.displayStart>=it.durationMs){it.state='SLIDE_OUT';it.animStart=now;}
+    }else if(it.state==='SLIDE_OUT'){
+      const e=now-it.animStart;
+      if(e>=this.ANIM){
         this.queue.shift();
-        if (this.queue.length > 0){
-          this.queue[0].state = 'SLIDE_IN';
-          this.queue[0].currentY = HIDDEN_Y;
-          this.queue[0].animStartTime = performance.now();
-          this.captureBg();
-        }
+        if(this.queue.length){this.queue[0].state='SLIDE_IN';this.queue[0].currentY=this.HIDDEN;this.queue[0].animStart=performance.now();}
         return;
-      } else {
-        const t = elapsed / this.ANIM_MS;
-        const ease = t * t * t;
-        targetY = RESTING_Y + (HIDDEN_Y - RESTING_Y) * ease;
       }
+      const t=e/this.ANIM,ea=t*t*t;y=this.REST+(this.HIDDEN-this.REST)*ea;
     }
-
-    item.currentY = targetY;
-
-    if (this.bgData){
-      this.sim.disp.ctx.putImageData(this.bgData, 0, 0);
-    }
-
-    const ctx = this.sim.disp.ctx;
-    ctx.save();
-    const y = Math.round(targetY);
-
-    let borderColor = '#00f0ff';
-    let badgeBg = '#007acc';
-    let badgeText = 'i';
-    if (item.iconType === 'success'){
-      borderColor = '#00e676'; badgeBg = '#00e676'; badgeText = '✓';
-    } else if (item.iconType === 'warn'){
-      borderColor = '#ffb300'; badgeBg = '#ffb300'; badgeText = '!';
-    } else if (item.iconType === 'error'){
-      borderColor = '#ff3d00'; badgeBg = '#ff3d00'; badgeText = '✕';
-    }
-
-    ctx.fillStyle = '#101421';
-    ctx.strokeStyle = borderColor;
-    ctx.lineWidth = 1.5;
-    this.sim.disp._rr(ctx, CARD_X, y, CARD_W, CARD_H, CARD_R);
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.arc(CARD_X + 16, y + 21, 10, 0, Math.PI * 2);
-    ctx.fillStyle = badgeBg;
-    ctx.fill();
-
-    ctx.font = 'bold 11px sans-serif';
-    ctx.fillStyle = '#000000';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(badgeText, CARD_X + 16, y + 21);
-
-    ctx.font = 'bold 12px "Courier New", monospace';
-    ctx.fillStyle = '#ffffff';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.fillText(item.title, CARD_X + 34, y + 6);
-
-    ctx.font = '10px "Courier New", monospace';
-    ctx.fillStyle = '#b0b8c4';
-    ctx.fillText(item.message, CARD_X + 34, y + 24);
-
-    ctx.restore();
+    it.currentY=y;
+    const ctx=oc;
+    let border='#00f0ff',badge='#007acc',text='i';
+    if(it.iconType==='success'){border='#00e676';badge='#00e676';text='✓';}
+    else if(it.iconType==='warn'){border='#ffb300';badge='#ffb300';text='!';}
+    else if(it.iconType==='error'){border='#ff3d00';badge='#ff3d00';text='✕';}
+    const rx=this.CX,r=this.CR,y0=Math.round(y);
+    ctx.fillStyle='#0d1120';ctx.strokeStyle=border;ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(rx+r,y0);ctx.arcTo(rx+this.CW,y0,rx+this.CW,y0+this.CH,r);ctx.arcTo(rx+this.CW,y0+this.CH,rx,y0+this.CH,r);ctx.arcTo(rx,y0+this.CH,rx,y0,r);ctx.arcTo(rx,y0,rx+this.CW,y0,r);ctx.closePath();
+    ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.arc(rx+16,y0+21,10,0,Math.PI*2);ctx.fillStyle=badge;ctx.fill();
+    ctx.font='bold 11px sans-serif';ctx.fillStyle='#000';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,rx+16,y0+21);
+    ctx.font='bold 12px "Courier New",monospace';ctx.fillStyle='#fff';ctx.textAlign='left';ctx.textBaseline='top';ctx.fillText(it.title,rx+34,y0+6);
+    ctx.font='10px "Courier New",monospace';ctx.fillStyle='#b0b8c4';ctx.fillText(it.message,rx+34,y0+24);
   }
 }
 
-/* =========================================================
-   6. ON-SCREEN KEYBOARD (Touch Input)
-   ========================================================= */
-class OnScreenKeyboard {
+/* ─── 8. ON-SCREEN KEYBOARD ───────────────────────────────────── */
+class OnScreenKeyboard{
   constructor(sim){
-    this.sim = sim; this.text = ''; this.caps = false; this.active = false;
-    this.resolve = null; this.promptMsg = '';
-    this.kw = 12; this.kh = 4;
-    this.keyset = [
+    this.sim=sim;this.active=false;this.text='';this.caps=false;this.resolve=null;this.prompt='';this.maxLen=30;
+    // Row 3 col 0 fixed: no duplicate backslash
+    this.keyset=[
       [['1','!'],['2','@'],['3','#'],['4','$'],['5','%'],['6','^'],['7','&'],['8','*'],['9','('],['0',')'],['-','_'],['=','+']],
       [['q','Q'],['w','W'],['e','E'],['r','R'],['t','T'],['y','Y'],['u','U'],['i','I'],['o','O'],['p','P'],['[','{'],[']','}']],
-      [['a','A'],['s','S'],['d','D'],['f','F'],['g','G'],['h','H'],['j','J'],['k','K'],['l','L'],[';',':'],['\'','"'],['\\','|']],
-      [['\\','|'],['z','Z'],['x','X'],['c','C'],['v','V'],['b','B'],['n','N'],['m','M'],[',','<'],['.','>'],['/','?'],[' ',' ']]
+      [['a','A'],['s','S'],['d','D'],['f','F'],['g','G'],['h','H'],['j','J'],['k','K'],['l','L'],[';',':'],["'",'"'],['\\','|']],
+      [['`','~'],['z','Z'],['x','X'],['c','C'],['v','V'],['b','B'],['n','N'],['m','M'],[',','<'],['.','>'],['/','?'],[' ',' ']]
     ];
   }
-  show(promptMsg, initial){
-    this.sim.touch.touched = false;
-    this.sim.touch.justPressed = false;
-    this.text = initial != null ? String(initial) : ''; 
-    this.caps = false; 
-    this.active = true;
-    this.promptMsg = promptMsg || 'Input';
-    this.draw();
-    return new Promise((res) => { this.resolve = res; });
+  show(prompt,initial='',maxLen=30){
+    this.sim.touch.touched=false;this.sim.touch.justPressed=false;
+    this.text=String(initial!=null?initial:'');this.caps=false;this.active=true;
+    this.prompt=prompt||'Input';this.maxLen=maxLen;this._draw();
+    return new Promise(res=>{this.resolve=res;});
   }
-  draw(){
-    const d = this.sim.disp;
+  _draw(){
+    const d=this.sim.disp;
     d.fillScreen(TFT_BLACK);
-    d.setTextDatum(TL_DATUM);
-    d.setTextColor(TFT_GREEN, TFT_BLACK);
-    d.drawString(String(this.promptMsg).substring(0, 24), 5, 10, 2);
-
-    d.drawRect(5, 30, 230, 30, TFT_GREEN);
-    d.setTextColor(TFT_WHITE, TFT_BLACK);
-    const disp = this.text.length > 18 ? this.text.substring(this.text.length - 18) : this.text;
-    d.drawString(disp + '_', 10, 38, 2);
-
-    const btnW = 240 / 5;
-    const btns = ['OK', this.caps ? 'abc' : 'ABC', 'DEL', 'SPACE', 'ESC'];
-    d.setTextDatum(MC_DATUM);
-    for (let i = 0; i < 5; i++){
-      d.drawRect(i * btnW, 70, btnW, 30, TFT_GREEN);
-      d.setTextColor(TFT_WHITE, TFT_BLACK);
-      d.drawString(btns[i], i * btnW + btnW / 2, 85, 2);
+    d.setTextDatum(0);d.setTextColor(TFT_GREEN,TFT_BLACK);
+    d.drawString(this.prompt.substring(0,26),5,10,2);
+    d.drawRect(5,30,230,30,TFT_GREEN);
+    d.setTextColor(TFT_WHITE,TFT_BLACK);
+    const disp=this.text.length>18?this.text.slice(-18):this.text;
+    d.drawString(disp+'_',10,38,2);
+    const btnW=48;
+    const btns=['OK',this.caps?'abc':'ABC','DEL','SPACE','ESC'];
+    for(let i=0;i<5;i++){
+      d.drawRect(i*btnW,70,btnW,30,TFT_GREEN);
+      d.setTextColor(TFT_WHITE,TFT_BLACK);d.setTextDatum(4);
+      d.drawString(btns[i],i*btnW+btnW/2,85,2);
     }
-
-    const keyW = 240 / this.kw;
-    const keyH = (320 - 110) / this.kh;
-    for (let y = 0; y < this.kh; y++){
-      for (let x = 0; x < this.kw; x++){
-        const px = x * keyW;
-        const py = 110 + y * keyH;
-        d.drawRect(px, py, keyW, keyH, TFT_DARKGREY);
-        const c = this.caps ? this.keyset[y][x][1] : this.keyset[y][x][0];
-        d.setTextColor(TFT_WHITE, TFT_BLACK);
-        d.drawString(c, px + keyW / 2, py + keyH / 2, 2);
-      }
+    const kw=12,kh=4;const keyW=240/kw,keyH=(320-110)/kh;
+    for(let y=0;y<kh;y++)for(let x=0;x<kw;x++){
+      const px=x*keyW,py=110+y*keyH;
+      d.drawRect(px,py,keyW,keyH,TFT_DARKGREY);
+      const c=this.caps?this.keyset[y][x][1]:this.keyset[y][x][0];
+      d.setTextColor(TFT_WHITE,TFT_BLACK);d.setTextDatum(4);
+      d.drawString(c,px+keyW/2,py+keyH/2,2);
     }
   }
-  handleTouch(x, y){
-    if (y >= 70 && y <= 100){
-      const btnW = 240 / 5;
-      const idx = Math.floor(x / btnW);
-      if (idx === 0) this.finish(this.text);
-      else if (idx === 1) { this.caps = !this.caps; this.draw(); }
-      else if (idx === 2) { if (this.text.length > 0) this.text = this.text.slice(0, -1); this.draw(); }
-      else if (idx === 3) { this.text += ' '; this.draw(); }
-      else this.finish('');
+  handleTouch(x,y){
+    if(y>=70&&y<=100){
+      const idx=Math.floor(x/48);
+      if(idx===0)this._finish(this.text);
+      else if(idx===1){this.caps=!this.caps;this._draw();}
+      else if(idx===2){if(this.text.length>0)this.text=this.text.slice(0,-1);this._draw();}
+      else if(idx===3){if(this.text.length<this.maxLen)this.text+=' ';this._draw();}
+      else this._finish('');
       return;
     }
-    if (y >= 110){
-      const keyW = 240 / this.kw;
-      const keyH = (320 - 110) / this.kh;
-      const kx = Math.floor(x / keyW);
-      const ky = Math.floor((y - 110) / keyH);
-      if (kx >= 0 && kx < this.kw && ky >= 0 && ky < this.kh){
-        const c = this.caps ? this.keyset[ky][kx][1] : this.keyset[ky][kx][0];
-        this.text += c; this.draw();
+    if(y>=110){
+      const kw=12,kh=4;const keyW=240/kw,keyH=(320-110)/kh;
+      const kx=Math.floor(x/keyW),ky=Math.floor((y-110)/keyH);
+      if(kx>=0&&kx<kw&&ky>=0&&ky<kh){
+        const c=this.caps?this.keyset[ky][kx][1]:this.keyset[ky][kx][0];
+        if(this.text.length<this.maxLen)this.text+=c;
+        this._draw();
       }
     }
   }
-  finish(val){
-    if (!this.active) return;
-    this.active = false;
-    const r = this.resolve;
-    this.resolve = null;
-    if (r) r(val);
+  _finish(val){
+    if(!this.active)return;
+    this.active=false;const r=this.resolve;this.resolve=null;
+    if(r)r(val);
   }
 }
 
-/* =========================================================
-   7. ASYNC TRANSPILER (Guarantees Non-Blocking 60 FPS Event Loop)
-   ========================================================= */
-function universalAsyncTransform(source) {
-  let code = source;
-  const fnNames = new Set();
-  const regex = /\bfunction\s+([a-zA-Z0-9_$]+)\s*\(/g;
-  let match;
-  while ((match = regex.exec(source)) !== null) {
-    fnNames.add(match[1]);
+/* ─── 9. TRANSPILER (token-based, string/comment safe) ────────── */
+function shieldTokens(src){
+  const tokens=[];
+  let i=0,out='';
+  while(i<src.length){
+    const c=src[i];
+    if(c==='"'||c==="'"||c==='`'){
+      const q=c;let j=i+1;
+      while(j<src.length&&src[j]!==q){if(src[j]==='\\')j++;j++;}
+      tokens.push(src.substring(i,Math.min(j+1,src.length)));
+      out+='\x00S'+(tokens.length-1)+'\x00';
+      i=j+1;
+    }else if(c==='/'&&src[i+1]==='/'){
+      let end=src.indexOf('\n',i);if(end===-1)end=src.length;
+      tokens.push(src.substring(i,end));out+='\x00C'+(tokens.length-1)+'\x00';i=end;
+    }else if(c==='/'&&src[i+1]==='*'){
+      let end=src.indexOf('*/',i+2);end=end===-1?src.length:end+2;
+      tokens.push(src.substring(i,end));out+='\x00C'+(tokens.length-1)+'\x00';i=end;
+    }else{out+=c;i++;}
   }
+  return {code:out,tokens};
+}
+function restoreTokens(code,tokens){
+  return code.replace(/\x00([SC])(\d+)\x00/g,(m,t,idx)=>tokens[parseInt(idx,10)]);
+}
+function transpile(src){
+  // Reject Duktape-incompatible syntax up-front
+  if(/\basync\s+function\b/.test(src)
+    || /\basync\s*\(/.test(src)
+    || /\basync\s+[A-Za-z_$][\w$]*\s*=>/.test(src)
+    || /(^|[^\w$])await\s/.test(src)
+    || /\bnew\s+Promise\b/.test(src)
+    || /\bPromise\s*\.\s*(?:resolve|reject|all|race)\b/.test(src)){
+    throw new Error('Duktape 2.7 runtime: async/await/Promise not supported. Use System.delay() (blocking on device).');
+  }
+  const needsAsync=/\bSystem\s*\.\s*(?:delay|delayMicroseconds|prompt)\s*\(/.test(src);
+  if(!needsAsync)return src;
 
-  code = code.replace(/\bfunction\s+([a-zA-Z0-9_$]+)\s*\(/g, 'async function $1(');
-  code = code.replace(/\bfunction\s*\(/g, 'async function(');
+  const {code:shielded,tokens}=shieldTokens(src);
+  let code=shielded;
 
-  code = code.replace(/(?<!await\s+)\bSystem\.delay\s*\(/g, 'await System.delay(');
-  code = code.replace(/(?<!await\s+)\bSystem\.delayMicroseconds\s*\(/g, 'await System.delayMicroseconds(');
-  code = code.replace(/(?<!await\s+)\bSystem\.prompt\s*\(/g, 'await System.prompt(');
+  // 1. Convert function declarations/expressions to async
+  code=code.replace(/\bfunction\s+([A-Za-z_$][\w$]*)\s*\(/g,'async function $1(');
+  code=code.replace(/\bfunction\s*\(/g,'async function (');
 
-  fnNames.forEach(fn => {
-    const callRegex = new RegExp(`(?<!async\\s+function\\s+|function\\s+|await\\s+|\\.)\\b${fn}\\s*\\(`, 'g');
-    code = code.replace(callRegex, `await ${fn}(`);
+  // 2. Convert plain arrow functions
+  code=code.replace(/(\([^()]*\)|[A-Za-z_$][\w$]*)\s*=>\s*\{/g,'async $1 => {');
+
+  // 3. Convert object method shorthand (skip keywords)
+  const KW=new Set(['if','for','while','switch','catch','return','typeof','new','delete','do','else','try','finally','case','default','with','throw','void','function']);
+  code=code.replace(/([{,]\s*)([A-Za-z_$][\w$]*)\s*\(([^()]*)\)\s*\{/g,(m,pre,name,params)=>{
+    if(KW.has(name))return m;
+    return `${pre}async ${name}(${params}) {`;
   });
 
-  return code;
-}
+  // 4. Collect declared async function names
+  const declared=new Set();
+  const dr=/\basync\s+function\s+([A-Za-z_$][\w$]*)\s*\(/g;
+  let m;while((m=dr.exec(code))!==null)declared.add(m[1]);
 
-/* =========================================================
-   8. RUNTIME APIS SPECIFICATION
-   ========================================================= */
-function buildRuntimeAPIs(sim){
-  const disp = sim.disp;
-  const startTime = Date.now();
+  // 5. Await System.delay/delayMicroseconds/prompt
+  code=code.replace(/(^|[^.\w$])(System\s*\.\s*(?:delay|delayMicroseconds|prompt))\s*\(/g,'$1await $2(');
 
-  const FastMath = {
-    sin: (r) => Math.sin(r),
-    cos: (r) => Math.cos(r),
-    tan: (r) => Math.tan(r),
-    fastSin: (d) => Math.sin(d * Math.PI / 180),
-    fastCos: (d) => Math.cos(d * Math.PI / 180),
-    asin: (x) => Math.asin(x),
-    acos: (x) => Math.acos(x),
-    atan2: (y, x) => Math.atan2(y, x),
-    sqrt: (x) => Math.sqrt(x),
-    hypot: (x, y) => Math.hypot(x, y),
-    clamp: (v, min, max) => Math.max(min, Math.min(max, v)),
-    lerp: (a, b, t) => a + t * (b - a),
-    map: (v, inMin, inMax, outMin, outMax) => (v - inMin) * (outMax - outMin) / (inMax - inMin) + outMin,
-    degToRad: (d) => d * (Math.PI / 180),
-    radToDeg: (r) => r * (180 / Math.PI),
-    random: () => Math.random(),
-    randomRange: (min, max) => min + Math.random() * (max - min),
-    vec2Distance: (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1),
-    vec3Distance: (x1, y1, z1, x2, y2, z2) => {
-      const dx=x2-x1, dy=y2-y1, dz=z2-z1;
-      return Math.sqrt(dx*dx + dy*dy + dz*dz);
-    },
-    dot2: (x1, y1, x2, y2) => x1 * x2 + y1 * y2,
-    dot3: (x1, y1, z1, x2, y2, z2) => x1 * x2 + y1 * y2 + z1 * z2,
-    normalize2: (x, y) => {
-      const l = Math.hypot(x, y);
-      return l > 0.0001 ? { x: x/l, y: y/l } : { x: 0, y: 0 };
-    },
-    normalize3: (x, y, z) => {
-      const l = Math.sqrt(x*x + y*y + z*z);
-      return l > 0.0001 ? { x: x/l, y: y/l, z: z/l } : { x: 0, y: 0, z: 0 };
-    },
-    PI: Math.PI,
-    HALF_PI: Math.PI * 0.5,
-    TWO_PI: Math.PI * 2.0,
-    DEG_TO_RAD: Math.PI / 180,
-    RAD_TO_DEG: 180 / Math.PI
-  };
-
-  const FS = {
-    readTextFile: (p) => sim.vfs.readTextFile(p),
-    writeTextFile: (p, c) => sim.vfs.writeTextFile(p, c),
-    appendTextFile: (p, c) => sim.vfs.appendTextFile(p, c),
-    deleteFile: (p) => sim.vfs.deleteFile(p),
-    renameFile: (f, t) => sim.vfs.renameFile(f, t),
-    exists: (p) => sim.vfs.exists(p),
-    listDir: (p) => sim.vfs.listDir(p),
-    mkdir: (p) => sim.vfs.mkdir(p),
-    rmdir: (p) => sim.vfs.rmdir(p),
-    isDirectory: (p) => sim.vfs.isDirectory(p),
-    isFile: (p) => sim.vfs.isFile(p),
-    getFileSize: (p) => sim.vfs.getFileSize(p),
-    getTotalSpace: (d) => sim.vfs.getTotalSpace(d),
-    getUsedSpace: (d) => sim.vfs.getUsedSpace(d),
-    getFreeSpace: (d) => sim.vfs.getFreeSpace(d),
-    mountSD: () => true,
-    unmountSD: () => {}
-  };
-
-  const PWM = {
-    setup: (pin, freq = 5000) => pin,
-    write: (pin, duty) => {},
-    setDuty: (pin, percent) => {},
-    setFrequency: (pin, freq) => {},
-    setTone: (pin, freq, dur = 0) => audioHardware.setTone(pin, freq, dur),
-    stopTone: (pin) => audioHardware.stopTone(pin),
-    setServo: (pin, angle) => {},
-    detach: (pin) => audioHardware.stopTone(pin),
-    reset: () => audioHardware.reset()
-  };
-
-  const Network = {
-    get: async (url) => {
-      try {
-        const res = await fetch(url);
-        const body = await res.text();
-        return { status: res.status, body, error: "" };
-      } catch(e) {
-        return { status: 0, body: "", error: e.message };
-      }
-    },
-    post: async (url, body, contentType = "application/json") => {
-      try {
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': contentType },
-          body: String(body)
-        });
-        const respBody = await res.text();
-        return { status: res.status, body: respBody, error: "" };
-      } catch(e) {
-        return { status: 0, body: "", error: e.message };
-      }
-    },
-    isConnected: () => true,
-    hasInternet: () => navigator.onLine,
-    getIP: () => "192.168.1.100",
-    getSSID: () => "KryonOS_Home",
-    getRSSI: () => -55,
-    showWiFiPrompt: () => sim.notif.post("WiFi", "Device is online", "ok")
-  };
-
-  const System = {
-    fillScreen: (c) => disp.fillScreen(c),
-    fillRect: (x,y,w,h,c) => disp.fillRect(x,y,w,h,c),
-    drawRect: (x,y,w,h,c) => disp.drawRect(x,y,w,h,c),
-    drawFastHLine: (x,y,w,c) => disp.drawFastHLine(x,y,w,c),
-    drawFastVLine: (x,y,h,c) => disp.drawFastVLine(x,y,h,c),
-    drawLine: (a,b,c,d,e) => disp.drawLine(a,b,c,d,e),
-    drawPixel: (x,y,c) => disp.drawPixel(x,y,c),
-    drawCircle: (x,y,r,c) => disp.drawCircle(x,y,r,c),
-    fillCircle: (x,y,r,c) => disp.fillCircle(x,y,r,c),
-    drawTriangle: (...a) => disp.drawTriangle(...a),
-    fillTriangle: (...a) => disp.fillTriangle(...a),
-    drawRoundRect: (...a) => disp.drawRoundRect(...a),
-    fillRoundRect: (...a) => disp.fillRoundRect(...a),
-    drawString: (s, x, y, f=2) => disp.drawString(s, x, y, f),
-    setTextColor: (f, b) => disp.setTextColor(f, b),
-    setTextSize: (s) => disp.setTextSize(s),
-    color: (r, g, b) => disp.color(r, g, b),
-    screenWidth: () => 240,
-    screenHeight: () => 320,
-
-    createSprite: (w, h) => {
-      disp.activeSprite = new VirtualSprite(w, h);
-      return true;
-    },
-    deleteSprite: () => { disp.activeSprite = null; },
-    pushSprite: (x, y) => {
-      if (disp.activeSprite) disp.ctx.drawImage(disp.activeSprite.canvas, x, y);
-    },
-    bindSprite: (enable) => { if (!enable) disp.activeSprite = null; },
-
-    getTouch: () => {
-      if (sim.exitRequested) throw Object.assign(new Error('OS_EXIT'), { code: 'OS_EXIT' });
-      if (sim.keyboard.active) return { x: 0, y: 0, touched: false };
-      const t = sim.touch;
-      // Also allow touching the top right corner inside the canvas to exit
-      if ((t.touched || t.justPressed) && t.x >= 200 && t.y <= 40) {
-        throw Object.assign(new Error('OS_EXIT'), { code: 'OS_EXIT' });
-      }
-      const wasTouched = t.touched || t.justPressed;
-      t.justPressed = false;
-      return { x: t.x, y: t.y, touched: wasTouched };
-    },
-
-    millis: () => Date.now() - startTime,
-    micros: () => (Date.now() - startTime) * 1000,
-    delay: (ms) => new Promise((res, rej) => {
-      const cap = Math.min(Math.max(0, ms|0), 30000);
-      const start = Date.now();
-      const tick = () => {
-        if (sim.exitRequested){ rej(Object.assign(new Error('OS_EXIT'), { code: 'OS_EXIT' })); return; }
-        if (Date.now() - start >= cap){ res(); return; }
-        setTimeout(tick, 10);
-      };
-      tick();
-    }),
-    delayMicroseconds: (us) => new Promise(res => setTimeout(res, Math.max(1, (us/1000)|0))),
-    print: (...m) => log(m.join(' ')),
-    println: (...m) => log(m.join(' ')),
-    log: (...m) => log(m.join(' ')),
-    getYear: () => new Date().getFullYear(),
-    getMonth: () => new Date().getMonth() + 1,
-    getDay: () => new Date().getDate(),
-    getSeconds: () => new Date().getSeconds(),
-    getTime: () => new Date().toLocaleTimeString(),
-    getDate: () => new Date().toLocaleDateString(),
-    getTimezone: () => "UTC+6",
-    getOSVersion: () => KRYONOS_VERSION,
-    getAPILevel: () => KRYONOS_API_LEVEL,
-    prompt: (msg, init) => sim.keyboard.show(msg, init),
-    notify: (title, msg, icon = 'info', dur = 3000) => sim.notif.post(title, msg, icon, dur),
-
-    math: FastMath,
-    pwm: PWM,
-    gpio: {
-      pinMode: () => {}, digitalWrite: () => {}, digitalRead: () => 0,
-      analogRead: () => 512, analogWrite: () => {},
-      OUTPUT: 1, INPUT: 0, INPUT_PULLUP: 2, HIGH: 1, LOW: 0
-    },
-    crypto: {
-      sha256: () => "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      randomBytes: (len) => Array.from({length:len}, () => Math.floor(Math.random()*256).toString(16).padStart(2,'0')).join('')
-    }
-  };
-
-  return { System, FastMath, FS, PWM, Network };
-}
-
-/* =========================================================
-   9. LAUNCHER UI (Scroller & Dynamic App List)
-   ========================================================= */
-class LauncherUI {
-  constructor(sim){
-    this.sim = sim;
-    this.selectedIndex = 1;
-    this.scrollOffset = 0;
-    this.apps = [];
-  }
-
-  scanApps(){
-    this.apps = [];
-    for (const d of ['/local/apps', '/sd/apps']){
-      if (!this.sim.vfs.isDirectory(d)) continue;
-      for (const e of this.sim.vfs.listDirFull(d)){
-        if (e.isDir){
-          const jp = e.path + '/app.json';
-          if (this.sim.vfs.exists(jp)){
-            try {
-              const o = JSON.parse(this.sim.vfs.readTextFile(jp));
-              const n = o.name || e.name;
-              if (!this.apps.find(a => a.name === n)) {
-                this.apps.push({ name: n, path: e.path, isFolder: true });
-              }
-            } catch(err){}
-          }
-        }
-      }
-    }
-  }
-
-  total(){ return this.apps.length + 7; }
-
-  draw(){
-    const d = this.sim.disp;
-    d.fillScreen(TFT_BLACK);
-    d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
-    d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
-    d.drawRoundRect(6, 6, 228, 30, 5, TFT_GREEN);
-    d.setTextColor(TFT_GREEN, TFT_BLACK);
-    d.setTextDatum(MC_DATUM);
-    d.drawString('KryonOS Home', 120, 21, 2);
-
-    d.fillRect(10, 45, 220, 230, TFT_BLACK);
-    const total = this.total();
-    const pp = 7; // Items per page
-
-    for (let i = 0; i < pp; i++){
-      const idx = this.scrollOffset + i;
-      if (idx >= total) break;
-      const y = 45 + i * 30;
-      let name = '', isHdr = false;
-
-      if (idx === 0) { name = '[ SYSTEM ]'; isHdr = true; }
-      else if (idx === 1) name = 'App Store';
-      else if (idx === 2) name = 'App Installer';
-      else if (idx === 3) name = 'Kryon Cloud';
-      else if (idx === 4) name = 'Settings';
-      else if (idx === 5) name = 'Help Center';
-      else if (idx === 6) { name = '[ APPS ]'; isHdr = true; }
-      else name = this.apps[idx - 7].name;
-
-      if (isHdr){
-        d.setTextColor(TFT_DARKGREY, TFT_BLACK);
-        d.setTextDatum(ML_DATUM);
-        d.drawString(name, 15, y + 12, 2);
-      } else if (idx === this.selectedIndex){
-        d.fillRect(10, y, 220, 25, TFT_WHITE);
-        d.setTextColor(TFT_BLACK, TFT_WHITE);
-        d.setTextDatum(ML_DATUM);
-        d.drawString('> ' + name, 15, y + 12, 2);
-      } else {
-        d.setTextColor(TFT_WHITE, TFT_BLACK);
-        d.setTextDatum(ML_DATUM);
-        d.drawString('  ' + name, 15, y + 12, 2);
-      }
-    }
-
-    // Scrollbar indicator
-    if (total > pp) {
-      const sbH = Math.max(16, (230 * pp) / total);
-      const sbY = 45 + (this.scrollOffset * (230 - sbH)) / (total - pp);
-      d.fillRect(231, 45, 3, 230, TFT_DARKGREY);
-      d.fillRect(231, sbY, 3, sbH, TFT_WHITE);
-    }
-
-    d.drawRoundRect(5, 285, 230, 30, 5, TFT_WHITE);
-    d.setTextColor(TFT_WHITE, TFT_BLACK);
-    d.setTextDatum(MC_DATUM);
-    d.drawString('UP', 30, 300, 2);  d.drawString('|', 60, 300, 2);
-    d.drawString('SEL', 120, 300, 2); d.drawString('|', 180, 300, 2);
-    d.drawString('DN', 210, 300, 2);
-  }
-
-  handleTouch(x, y){
-    const total = this.total();
-    const pp = 7;
-
-    // Direct List Tap
-    if (y >= 45 && y <= 270){
-      const clicked = this.scrollOffset + Math.floor((y - 45) / 30);
-      if (clicked < total && clicked !== 0 && clicked !== 6){
-        this.selectedIndex = clicked;
-        this.draw();
-        this.execute();
-      }
-      return;
-    }
-
-    // Bottom Navigation Buttons
-    if (y >= 285 && y <= 315){
-      if (x < 60){ // UP
-        if (this.selectedIndex > 1){
-          this.selectedIndex--;
-          if (this.selectedIndex === 6) this.selectedIndex--; // Skip header
-          if (this.selectedIndex < this.scrollOffset){
-            this.scrollOffset = this.selectedIndex;
-          }
-          if (this.selectedIndex === 1) this.scrollOffset = 0;
-          this.draw();
-        } else if (this.scrollOffset > 0) {
-          this.scrollOffset = 0;
-          this.draw();
-        }
-      } else if (x > 60 && x < 180){ // SEL
-        this.execute();
-      } else if (x > 180){ // DN
-        if (this.selectedIndex < total - 1){
-          this.selectedIndex++;
-          if (this.selectedIndex === 6) this.selectedIndex++; // Skip header
-          if (this.selectedIndex >= this.scrollOffset + pp){
-            this.scrollOffset = this.selectedIndex - pp + 1;
-          }
-          this.draw();
-        }
-      }
-    }
-  }
-
-  execute(){
-    const s = this.selectedIndex;
-    if (s === 1) this.sim.setState(STATE_APP_STORE);
-    else if (s === 2) this.sim.setState(STATE_INSTALLER);
-    else if (s === 3) this.sim.notif.post("KryonCloud", "Online Gateway Synced", "ok");
-    else if (s === 4) this.sim.setState(STATE_SETTINGS);
-    else if (s === 5) this.sim.setState(STATE_HELP_CENTER);
-    else if (s > 6 && this.apps[s - 7]) this.sim.launchApp(this.apps[s - 7]);
-  }
-}
-
-/* =========================================================
-   10. SETTINGS & COMPLETE HARDWARE MENUS
-   ========================================================= */
-class SettingsUI {
-  constructor(sim){
-    this.sim = sim;
-    this.wifiEnabled = true;
-    this.subState = 0;
-    this.selected = 0;
-  }
-
-  draw(){
-    const d = this.sim.disp;
-    d.fillScreen(TFT_BLACK);
-    d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
-    d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
-    d.drawRoundRect(6, 6, 228, 30, 5, TFT_GREEN);
-    d.setTextColor(TFT_GREEN, TFT_BLACK);
-    d.setTextDatum(MC_DATUM);
-    d.drawString("Settings Menu", 120, 21, 2);
-
-    let y = 40;
-    const items = [
-      { text: "WiFi Options", color: TFT_BLUE, state: STATE_SETTINGS_WIFI },
-      { text: "Touch Calibrator", color: TFT_ORANGE, state: STATE_CALIBRATOR },
-      { text: "Manage Apps", color: TFT_PURPLE, state: STATE_SETTINGS_APPS },
-      { text: "Permissions Manager", color: 0x03E0, state: STATE_SETTINGS_PERMISSIONS },
-      { text: "Time & Region", color: TFT_CYAN, state: STATE_SETTINGS_TIME },
-      { text: "About Device", color: TFT_DARKGREY, state: STATE_SETTINGS_ABOUT },
-      { text: "System Updates", color: TFT_RED, state: STATE_UPDATER_MANUAL }
-    ];
-
-    items.forEach((it, idx) => {
-      d.fillRoundRect(20, y, 200, 30, 4, it.color);
-      d.setTextColor(it.color === TFT_CYAN ? TFT_BLACK : TFT_WHITE, it.color);
-      d.drawString(it.text, 120, y + 15, 2);
-      y += 34;
+  // 6. Await calls to user-declared async functions — skip declarations
+  for(const fn of declared){
+    const re=new RegExp(`(^|[^\\w$.])(${escapeRegex(fn)})\\s*\\(`,'g');
+    code=code.replace(re,(full,pre,name,offset)=>{
+      const before=code.substring(0,offset+pre.length);
+      if(/\b(?:async\s+)?function\s+$/.test(before))return full; // declaration
+      if(/\b(?:typeof|new)\s+$/.test(before))return full;        // not a call
+      if(/\bawait\s+$/.test(before))return full;                 // already awaited
+      return pre+'await '+name+'(';
     });
-
-    d.drawRoundRect(5, 285, 230, 30, 5, TFT_WHITE);
-    d.setTextColor(TFT_WHITE, TFT_BLACK);
-    d.drawString("BACK", 120, 300, 2);
   }
 
-  handleTouch(x, y){
-    if (x >= 20 && x <= 220) {
-      if (y >= 40 && y <= 70) this.sim.setState(STATE_SETTINGS_WIFI);
-      else if (y >= 74 && y <= 104) this.sim.setState(STATE_CALIBRATOR);
-      else if (y >= 108 && y <= 138) this.sim.setState(STATE_SETTINGS_APPS);
-      else if (y >= 142 && y <= 172) this.sim.setState(STATE_SETTINGS_PERMISSIONS);
-      else if (y >= 176 && y <= 206) this.sim.setState(STATE_SETTINGS_TIME);
-      else if (y >= 210 && y <= 240) this.sim.setState(STATE_SETTINGS_ABOUT);
-      else if (y >= 244 && y <= 274) this.sim.setState(STATE_UPDATER_MANUAL);
-    }
-    if (y >= 285) this.sim.setState(STATE_LAUNCHER);
-  }
+  return restoreTokens(code,tokens);
 }
 
-class WiFiSettingsUI {
-  constructor(sim){ this.sim = sim; }
-  draw(){
-    const d = this.sim.disp;
-    d.fillScreen(TFT_BLACK);
-    d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
-    d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
-    d.drawRoundRect(6, 6, 228, 30, 5, TFT_GREEN);
-    d.setTextColor(TFT_GREEN, TFT_BLACK);
-    d.setTextDatum(MC_DATUM);
-    d.drawString("WiFi Options", 120, 21, 2);
+/* ─── 10. BOARDS ──────────────────────────────────────────────── */
+const BOARDS={
+  'esp32-s3-devkitc-1-n16r8':{name:'DevKitC-1',w:240,h:320,chip:'ESP32-S3',hasPsram:true},
+  'm5stack-cardputer':{name:'Cardputer',w:240,h:135,chip:'ESP32-S3',hasPsram:false},
+  'lilygo-t-hmi':{name:'T-HMI',w:240,h:320,chip:'ESP32-S3',hasPsram:true},
+  'esp32-cyd-28':{name:'CYD-28',w:240,h:320,chip:'ESP32',hasPsram:false},
+  'esp32doit-devkit-v1':{name:'DevKit v1',w:240,h:320,chip:'ESP32',hasPsram:false}
+};
 
-    d.fillRoundRect(10, 40, 220, 78, 6, 0x10A2);
-    d.drawRoundRect(10, 40, 220, 78, 6, TFT_CYAN);
-    d.setTextDatum(TL_DATUM);
-    d.setTextColor(TFT_GREEN, 0x10A2);
-    d.drawString("Status: ONLINE (Connected)", 18, 48, 2);
-    d.setTextColor(TFT_WHITE, 0x10A2);
-    d.drawString("SSID: Simulated_WiFi", 18, 68, 2);
-    d.drawString("IP:   192.168.1.100", 18, 88, 2);
-
-    d.setTextDatum(MC_DATUM);
-    d.fillRoundRect(12, 130, 216, 34, 5, TFT_PURPLE);
-    d.setTextColor(TFT_WHITE, TFT_PURPLE);
-    d.drawString("Scan Nearby Networks", 120, 147, 2);
-
-    d.fillRoundRect(12, 172, 216, 34, 5, 0x03E0);
-    d.setTextColor(TFT_WHITE, 0x03E0);
-    d.drawString("Saved Networks (1)", 120, 189, 2);
-
-    d.fillRoundRect(12, 214, 216, 34, 5, TFT_ORANGE);
-    d.setTextColor(TFT_WHITE, TFT_ORANGE);
-    d.drawString("Web Server Manager", 120, 231, 2);
-
-    d.drawRoundRect(5, 285, 230, 30, 5, TFT_WHITE);
-    d.setTextColor(TFT_WHITE, TFT_BLACK);
-    d.drawString("BACK", 120, 300, 2);
-  }
-  handleTouch(x, y){
-    if (y >= 130 && y <= 164) this.sim.notif.post("WiFi", "Scanning 2.4GHz spectrum...", "info");
-    else if (y >= 172 && y <= 206) this.sim.notif.post("WiFi", "Simulated_WiFi saved", "ok");
-    else if (y >= 214 && y <= 248) this.sim.setState(STATE_WEB_APP);
-    else if (y >= 285) this.sim.setState(STATE_SETTINGS);
-  }
-}
-
-class AboutDeviceUI {
-  constructor(sim){ this.sim = sim; }
-  draw(){
-    const d = this.sim.disp;
-    d.fillScreen(TFT_BLACK);
-    d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
-    d.fillRoundRect(6, 6, 228, 28, 5, TFT_BLACK);
-    d.drawRoundRect(6, 6, 228, 28, 5, TFT_GREEN);
-    d.setTextColor(TFT_GREEN, TFT_BLACK);
-    d.setTextDatum(MC_DATUM);
-    d.drawString("About Device", 120, 20, 2);
-
-    d.fillRoundRect(10, 40, 220, 100, 6, 0x10A2);
-    d.drawRoundRect(10, 40, 220, 100, 6, 0x2945);
-    d.setTextDatum(TL_DATUM);
-    d.setTextColor(TFT_GREEN, 0x10A2);
-    d.drawString("KryonOS v" + KRYONOS_VERSION, 18, 48, 2);
-    d.setTextColor(TFT_CYAN, 0x10A2);
-    d.drawString("Flash: 16 MB (14.2 MB free)", 18, 70, 2);
-    d.setTextColor(TFT_ORANGE, 0x10A2);
-    d.drawString("SD:    FAT32 (Virtual Mounted)", 18, 92, 2);
-    d.setTextColor(TFT_MAGENTA, 0x10A2);
-    d.drawString("RAM:   512 KB SRAM + 8 MB PSRAM", 18, 114, 2);
-
-    d.fillRoundRect(10, 148, 220, 80, 6, 0x10A2);
-    d.drawRoundRect(10, 148, 220, 80, 6, 0x05BF);
-    d.setTextColor(TFT_YELLOW, 0x10A2);
-    d.drawString("GitHub: Haris16-code/KryonOS", 18, 156, 2);
-    d.setTextColor(TFT_WHITE, 0x10A2);
-    d.drawString("Author: Haris (@Haris16-code)", 18, 178, 2);
-    d.setTextColor(TFT_GREEN, 0x10A2);
-    d.drawString("License: MIT Open Source", 18, 200, 2);
-
-    d.setTextDatum(MC_DATUM);
-    d.fillRoundRect(40, 240, 160, 32, 4, TFT_RED);
-    d.setTextColor(TFT_WHITE, TFT_RED);
-    d.drawString("Reset App Data", 120, 256, 2);
-
-    d.drawRoundRect(5, 285, 230, 30, 5, TFT_WHITE);
-    d.setTextColor(TFT_WHITE, TFT_BLACK);
-    d.drawString("BACK", 120, 300, 2);
-  }
-  handleTouch(x, y){
-    if (y >= 240 && y <= 272) {
-      this.sim.vfs.reset();
-      this.sim.notif.post("System", "App data formatted!", "warn");
-      this.draw();
-    } else if (y >= 285) {
-      this.sim.setState(STATE_SETTINGS);
-    }
-  }
-}
-
-class SystemUpdaterUI {
-  constructor(sim){ this.sim = sim; }
-  draw(){
-    const d = this.sim.disp;
-    d.fillScreen(TFT_BLACK);
-    d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
-    d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
-    d.drawRoundRect(6, 6, 228, 30, 5, TFT_GREEN);
-    d.setTextColor(TFT_GREEN, TFT_BLACK);
-    d.setTextDatum(MC_DATUM);
-    d.drawString("System Updates", 120, 21, 2);
-
-    d.setTextColor(TFT_GREEN, TFT_BLACK);
-    d.drawString("System is up to date!", 120, 120, 2);
-    d.setTextColor(TFT_CYAN, TFT_BLACK);
-    d.drawString("Current Version: v" + KRYONOS_VERSION, 120, 145, 2);
-    d.setTextColor(TFT_WHITE, TFT_BLACK);
-    d.drawString("Board: ESP32-S3 DevKitC-1", 120, 175, 2);
-
-    d.fillRoundRect(30, 220, 180, 36, 5, TFT_BLUE);
-    d.setTextColor(TFT_WHITE, TFT_BLUE);
-    d.drawString("Check GitHub", 120, 238, 2);
-
-    d.drawRoundRect(5, 285, 230, 30, 5, TFT_WHITE);
-    d.setTextColor(TFT_WHITE, TFT_BLACK);
-    d.drawString("BACK", 120, 300, 2);
-  }
-  handleTouch(x, y){
-    if (y >= 220 && y <= 256) {
-      this.sim.notif.post("OTA", "Latest version verified!", "ok");
-    } else if (y >= 285) {
-      this.sim.setState(STATE_SETTINGS);
-    }
-  }
-}
-
-class HelpCenterUI {
-  constructor(sim){ this.sim = sim; }
-  draw(){
-    const d = this.sim.disp;
-    d.fillScreen(TFT_BLACK);
-    d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
-    d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
-    d.drawRoundRect(6, 6, 228, 30, 5, TFT_GREEN);
-    d.setTextColor(TFT_GREEN, TFT_BLACK);
-    d.setTextDatum(MC_DATUM);
-    d.drawString("Help Center", 120, 21, 2);
-
-    d.setTextDatum(TL_DATUM);
-    d.setTextColor(TFT_YELLOW, TFT_BLACK);
-    d.drawString("Navigation Guide:", 15, 50, 2);
-    d.setTextColor(TFT_WHITE, TFT_BLACK);
-    d.drawString("• Tap app names to run them.", 15, 75, 2);
-    d.drawString("• Press hardware [✕ EXIT APP]", 15, 95, 2);
-    d.drawString("  button to return anytime.", 15, 115, 2);
-    d.drawString("• Use App Store to install apps", 15, 135, 2);
-    d.drawString("  directly from GitHub.", 15, 155, 2);
-
-    d.setTextColor(TFT_CYAN, TFT_BLACK);
-    d.drawString("Troubleshooting:", 15, 185, 2);
-    d.setTextColor(TFT_WHITE, TFT_BLACK);
-    d.drawString("• Free memory by toggling WiFi.", 15, 210, 2);
-    d.drawString("• Format storage in Settings.", 15, 230, 2);
-
-    d.setTextDatum(MC_DATUM);
-    d.drawRoundRect(5, 285, 230, 30, 5, TFT_WHITE);
-    d.setTextColor(TFT_WHITE, TFT_BLACK);
-    d.drawString("BACK", 120, 300, 2);
-  }
-  handleTouch(x, y){
-    if (y >= 285) this.sim.setState(STATE_LAUNCHER);
-  }
-}
-
-class TouchCalibratorUI {
-  constructor(sim){ this.sim = sim; this.step = 0; }
-  draw(){
-    const d = this.sim.disp;
-    d.fillScreen(TFT_BLACK);
-    d.setTextColor(TFT_WHITE, TFT_BLACK);
-    d.setTextDatum(MC_DATUM);
-    d.drawString("Touch Calibration", 120, 140, 2);
-    d.drawString("Tap the Red Arrow", 120, 165, 2);
-
-    d.drawLine(0, 0, 20, 0, TFT_RED);
-    d.drawLine(0, 0, 0, 20, TFT_RED);
-    d.drawLine(0, 0, 20, 20, TFT_RED);
-  }
-  handleTouch(x, y){
-    this.sim.notif.post("Touch", "Calibration Saved!", "ok");
-    this.sim.setState(STATE_SETTINGS);
-  }
-}
-
-/* =========================================================
-   11. APP STORE CLASS DEFINITION
-   ========================================================= */
-class AppStoreUI {
-  constructor(sim){
-    this.sim = sim;
-    this.state = 0; // 0=Categories, 1=Apps, 2=Details, 3=Notice
-    this.INDEX_URL = "https://raw.githubusercontent.com/Haris16-code/KryonOS-AppStore/refs/heads/main/index.json";
-    this.categories = [];
-    this.currentApps = [];
-    this.currentCategoryName = '';
-    this.selectedCatIdx = 0;
-    this.selectedAppIdx = 0;
-    this.scrollOffset = 0;
-    this.dialogMsg = '';
-    this.loading = false;
-  }
-
-  async fetchCategories(){
-    this.loading = true;
-    this.dialogMsg = "Fetching App Store...";
-    this.draw();
-    try {
-      const res = await fetch(this.INDEX_URL);
-      const data = await res.json();
-      this.categories = [{ name: "[ Check For Apps Update ]", url: "UPDATE_ACTION" }];
-      if (data && data.categories) {
-        for (const [name, url] of Object.entries(data.categories)) {
-          this.categories.push({ name, url: String(url) });
-        }
+/* ─── 11. API BUILDERS ────────────────────────────────────────── */
+function buildFastMath(){
+  return {
+    sin:r=>Math.sin(r),cos:r=>Math.cos(r),tan:r=>Math.tan(r),
+    fastSin:d=>Math.sin(d*Math.PI/180),fastCos:d=>Math.cos(d*Math.PI/180),
+    asin:x=>Math.asin(x),acos:x=>Math.acos(x),atan2:(y,x)=>Math.atan2(y,x),
+    sqrt:x=>Math.sqrt(x),hypot:(x,y)=>Math.hypot(x,y),
+    clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),
+    lerp:(a,b,t)=>a+t*(b-a),
+    map:(v,imin,imax,omin,omax)=>{if(Math.abs(imax-imin)<1e-6)return omin;return (v-imin)*(omax-omin)/(imax-imin)+omin;},
+    degToRad:d=>d*Math.PI/180,radToDeg:r=>r*180/Math.PI,
+    random:()=>Math.random(),randomRange:(a,b)=>a+Math.random()*(b-a),
+    vec2Distance:(x1,y1,x2,y2)=>Math.hypot(x2-x1,y2-y1),
+    vec3Distance:(x1,y1,z1,x2,y2,z2)=>Math.sqrt((x2-x1)**2+(y2-y1)**2+(z2-z1)**2),
+    dot2:(x1,y1,x2,y2)=>x1*x2+y1*y2,
+    dot3:(x1,y1,z1,x2,y2,z2)=>x1*x2+y1*y2+z1*z2,
+    cross3:(ax,ay,az,bx,by,bz)=>({x:ay*bz-az*by,y:az*bx-ax*bz,z:ax*by-ay*bx}),
+    normalize2:(x,y)=>{const l=Math.hypot(x,y);return l>1e-5?{x:x/l,y:y/l}:{x:0,y:0};},
+    normalize3:(x,y,z)=>{const l=Math.sqrt(x*x+y*y+z*z);return l>1e-5?{x:x/l,y:y/l,z:z/l}:{x:0,y:0,z:0};},
+    mat4Identity:()=>[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1],
+    mat4Multiply:(a,b)=>{const o=new Array(16).fill(0);for(let r=0;r<4;r++)for(let c=0;c<4;c++)o[r*4+c]=a[r*4]*b[c]+a[r*4+1]*b[4+c]+a[r*4+2]*b[8+c]+a[r*4+3]*b[12+c];return o;},
+    mat4Rotate:(ax,ay,az)=>{
+      const sx=Math.sin(ax),cx=Math.cos(ax),sy=Math.sin(ay),cy=Math.cos(ay),sz=Math.sin(az),cz=Math.cos(az);
+      return [cy*cz,cy*sz,-sy,0,sx*sy*cz-cx*sz,sx*sy*sz+cx*cz,sx*cy,0,cx*sy*cz+sx*sz,cx*sy*sz-sx*cz,cx*cy,0,0,0,0,1];
+    },
+    mat4Perspective:(fov,aspect,near,far)=>{
+      const f=1/Math.tan(fov/2),nf=1/(near-far);
+      return [f/aspect,0,0,0,0,f,0,0,0,0,(far+near)*nf,-1,0,0,2*far*near*nf,0];
+    },
+    transformVertices:(arr,mat,screenW=240,screenH=320,scale=200,distZ=3)=>{
+      const hw=screenW*0.5,hh=screenH*0.5;
+      const isObj=arr.length>0&&typeof arr[0]==='object';
+      if(isObj)return arr.map(v=>{
+        const tx=v.x*mat[0]+v.y*mat[4]+v.z*mat[8]+mat[12],ty=v.x*mat[1]+v.y*mat[5]+v.z*mat[9]+mat[13],tz=v.x*mat[2]+v.y*mat[6]+v.z*mat[10]+mat[14];
+        const zc=Math.max(0.001,tz+distZ);
+        return {x:tx,y:ty,z:tz,px:(tx/zc)*scale+hw,py:(ty/zc)*scale+hh};
+      });
+      const out=[];
+      for(let i=0;i+2<arr.length;i+=3){
+        const x=arr[i],y=arr[i+1],z=arr[i+2];
+        const tx=x*mat[0]+y*mat[4]+z*mat[8]+mat[12],ty=x*mat[1]+y*mat[5]+z*mat[9]+mat[13],tz=x*mat[2]+y*mat[6]+z*mat[10]+mat[14];
+        const zc=Math.max(0.001,tz+distZ);
+        out.push((tx/zc)*scale+hw,(ty/zc)*scale+hh);
       }
-      this.loading = false;
-      this.draw();
-    } catch(e) {
-      this.dialogMsg = "Store Offline: " + e.message;
-      this.state = 3;
-      this.loading = false;
-      this.draw();
-    }
+      return out;
+    },
+    arraySum:a=>a.reduce((s,v)=>s+v,0),
+    arrayMinMax:a=>{if(!a.length)return null;let mn=Infinity,mx=-Infinity;for(const v of a){if(v<mn)mn=v;if(v>mx)mx=v;}return {min:mn,max:mx};},
+    arrayDot:(a,b)=>{let s=0;const n=Math.min(a.length,b.length);for(let i=0;i<n;i++)s+=a[i]*b[i];return s;},
+    PI:Math.PI,HALF_PI:Math.PI*0.5,TWO_PI:Math.PI*2,DEG_TO_RAD:Math.PI/180,RAD_TO_DEG:180/Math.PI
+  };
+}
+function buildCrypto(){
+  const enc=new TextEncoder();
+  const hex=b=>Array.from(b).map(x=>x.toString(16).padStart(2,'0')).join('');
+  return {
+    sha256:async d=>hex(new Uint8Array(await crypto.subtle.digest('SHA-256',enc.encode(String(d))))),
+    sha512:async d=>hex(new Uint8Array(await crypto.subtle.digest('SHA-512',enc.encode(String(d))))),
+    hmacSha256:async(k,m)=>{
+      const key=await crypto.subtle.importKey('raw',enc.encode(String(k)),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+      return hex(new Uint8Array(await crypto.subtle.sign('HMAC',key,enc.encode(String(m)))));
+    },
+    aesEncrypt:p=>{log('[Crypto] aesEncrypt emulated','dim');return btoa(unescape(encodeURIComponent(String(p))));},
+    aesDecrypt:b=>{try{return decodeURIComponent(escape(atob(b)));}catch(e){return '';}},
+    randomBytes:n=>{const a=new Uint8Array(n);crypto.getRandomValues(a);return hex(a);},
+    rsaVerify:()=>{log('[Crypto] rsaVerify emulated → true','dim');return true;}
+  };
+}
+function buildPWM(){
+  const chMap=new Map();
+  return {
+    setup:(pin,freq=5000,res=8,ch=-1)=>{chMap.set(pin,ch>=0?ch:chMap.size);return chMap.get(pin);},
+    write:()=>true,setDuty:()=>true,setFrequency:()=>true,
+    setTone:(pin,f,d=0)=>{audioHW.setTone(pin,f,d);return true;},
+    stopTone:pin=>{audioHW.stopTone(pin);return true;},
+    setServo:()=>true,
+    detach:pin=>{audioHW.stopTone(pin);chMap.delete(pin);return true;},
+    getChannel:pin=>chMap.get(pin)??-1,
+    reset:()=>{audioHW.reset();chMap.clear();}
+  };
+}
+function buildI2C(){
+  let init=false;
+  return {
+    begin:(s,c)=>{init=true;log(`[I2C] SDA=${s} SCL=${c}`,'dim');return true;},
+    end:()=>{init=false;return true;},
+    scan:()=>init?[0x3C,0x68,0x76]:[],
+    ping:()=>init,
+    readReg:()=>init?0:-1,
+    writeReg:()=>init,
+    readReg16:()=>init?0:-1,
+    writeReg16:()=>init,
+    readRegBytes:(a,r,n)=>init?new Array(n).fill(0):null,
+    write:()=>init,
+    read:(a,n)=>init?new Array(n).fill(0):null,
+    reset:()=>{init=false;}
+  };
+}
+function buildNetwork(sim){
+  async function req(method,url,body,headers,timeout){
+    if(!sim.sim.wifi)return {status:0,body:'',error:'WiFi not connected'};
+    if(sim.sim.weather==='offline')return {status:0,body:'',error:'Simulator offline mode'};
+    if(sim.sim.weather==='slow')await sleep(3000);
+    try{
+      const ctrl=new AbortController();
+      const timer=setTimeout(()=>ctrl.abort(),timeout||8000);
+      const res=await fetch(url,{method,headers:headers||{},body:body||undefined,signal:ctrl.signal});
+      clearTimeout(timer);
+      const text=await res.text();
+      return {status:res.status,body:text,error:''};
+    }catch(e){return {status:0,body:'',error:String(e.message||e)};}
   }
-
-  async fetchCategoryApps(url){
-    if (url === "UPDATE_ACTION") {
-      this.dialogMsg = "All Apps are up to date!";
-      this.state = 3;
-      this.draw();
-      return;
-    }
-    this.loading = true;
-    this.dialogMsg = "Loading " + this.currentCategoryName + "...";
-    this.draw();
-    try {
-      const res = await fetch(url);
-      const data = await res.json();
-      this.currentApps = [];
-      if (data && data.apps) {
-        for (const [id, info] of Object.entries(data.apps)) {
-          this.currentApps.push({
-            id,
-            name: id.charAt(0).toUpperCase() + id.slice(1),
-            metaUrl: info.meta,
-            appUrl: info.app,
-            author: "GitHub Author",
-            version: "1.0.0",
-            description: "Tap to view details"
-          });
-        }
+  return {
+    get:(url,h,t)=>req('GET',url,null,h,t),
+    post:(url,body,ct='application/json',h,t)=>req('POST',url,body,Object.assign({'Content-Type':ct},h||{}),t),
+    put:(url,body,ct='application/json',h,t)=>req('PUT',url,body,Object.assign({'Content-Type':ct},h||{}),t),
+    delete:(url,h,t)=>req('DELETE',url,null,h,t),
+    request:opts=>req((opts.method||'GET').toUpperCase(),opts.url||'',opts.body||'',opts.headers||{},opts.timeout||8000),
+    downloadFile:async(url,dest,progressCb)=>{
+      if(!sim.sim.wifi)return false;
+      try{
+        const res=await fetch(url);if(!res.ok)return false;
+        const reader=res.body.getReader();
+        const total=parseInt(res.headers.get('Content-Length')||'0',10);
+        const chunks=[];let got=0;
+        while(true){const {done,value}=await reader.read();if(done)break;chunks.push(value);got+=value.length;if(progressCb)progressCb(got,total);}
+        const text=await new Blob(chunks).text();
+        sim.vfs.write(dest,text);
+        return true;
+      }catch(e){log('[Network] downloadFile error: '+e.message,'err');return false;}
+    },
+    isConnected:()=>sim.sim.wifi,
+    hasInternet:()=>sim.sim.wifi,
+    getIP:()=>sim.sim.wifi?'192.168.1.100':'0.0.0.0',
+    getSSID:()=>sim.sim.wifi?'KryonOS_Sim':'',
+    getRSSI:()=>sim.sim.wifi?-55:-100,
+    showWiFiPrompt:()=>sim.notif.post('WiFi','Device is online','ok')
+  };
+}
+function buildHttpServer(){
+  const routes=[];let listening=false;let port=80;let handled=0;const mws=[];const staticR=[];let nf=null;
+  return {
+    listen:(p=80)=>{port=p;listening=true;log(`[HttpServer] Listening on ${port} (simulated)`,'dim');return true;},
+    stop:()=>{listening=false;return true;},
+    isRunning:()=>listening,
+    getPort:()=>port,
+    getURL:()=>`http://192.168.1.100/`,
+    getStats:()=>({requestsHandled:handled,uptimeMs:0}),
+    poll:()=>{},reset:()=>{routes.length=0;mws.length=0;staticR.length=0;nf=null;handled=0;},
+    on:(m,p,cb)=>routes.push({method:String(m).toUpperCase(),path:p,cb}),
+    get:(p,cb)=>routes.push({method:'GET',path:p,cb}),
+    post:(p,cb)=>routes.push({method:'POST',path:p,cb}),
+    put:(p,cb)=>routes.push({method:'PUT',path:p,cb}),
+    delete:(p,cb)=>routes.push({method:'DELETE',path:p,cb}),
+    patch:(p,cb)=>routes.push({method:'PATCH',path:p,cb}),
+    options:(p,cb)=>routes.push({method:'OPTIONS',path:p,cb}),
+    use:cb=>mws.push(cb),
+    serveStatic:(prefix,fsPath)=>{staticR.push({prefix,fsPath});return true;},
+    notFound:cb=>{nf=cb;},
+    _invoke(method,path,body=''){
+      handled++;
+      const headers={};
+      let statusCode=200,sent=false;
+      const res={
+        status:(c)=>{statusCode=c;return res;},
+        setHeader:(k,v)=>{headers[k]=v;return res;},
+        setHeaders:o=>{Object.assign(headers,o);return res;},
+        cors:()=>{headers['Access-Control-Allow-Origin']='*';return res;},
+        send:b=>{sent=true;log(`[HttpServer] ${method} ${path} → ${statusCode}`,'info');},
+        json:()=>{sent=true;log(`[HttpServer] ${method} ${path} → ${statusCode} JSON`,'info');},
+        html:()=>{sent=true;log(`[HttpServer] ${method} ${path} → ${statusCode} HTML`,'info');},
+        text:()=>{sent=true;log(`[HttpServer] ${method} ${path} → ${statusCode} text`,'info');},
+        sendFile:p=>{sent=true;log(`[HttpServer] ${method} ${path} → file ${p}`,'info');},
+        redirect:l=>{sent=true;log(`[HttpServer] ${method} ${path} → redirect ${l}`,'info');}
+      };
+      const req={method,url:path,path,body,query:{},params:{},headers,ip:'127.0.0.1',clientIP:'127.0.0.1',
+        json:()=>{try{return JSON.parse(body);}catch(e){return null;}},
+        getHeader:k=>headers[String(k).toLowerCase()]||null};
+      for(const mw of mws){if(sent)break;try{mw(req,res);}catch(e){log('[HttpServer] MW error: '+e.message,'err');}}
+      if(!sent){
+        const matched=routes.find(r=>{
+          const want=r.method==='ANY'||r.method==='*'||r.method===method;
+          const mPath=r.path===path||(r.path.endsWith('/*')&&path.startsWith(r.path.slice(0,-1)));
+          return want&&mPath;
+        });
+        if(matched){try{matched.cb(req,res);}catch(e){log('[HttpServer] Handler error: '+e.message,'err');}}
+        else if(nf){try{nf(req,res);}catch(e){}}
       }
-      this.state = 1;
-      this.selectedAppIdx = 0;
-      this.scrollOffset = 0;
-      this.loading = false;
-      this.draw();
-    } catch(e) {
-      this.dialogMsg = "Failed to load apps: " + e.message;
-      this.state = 3;
-      this.loading = false;
-      this.draw();
+      if(!sent)log(`[HttpServer] ${method} ${path} → 404`,'warn');
     }
-  }
-
-  async fetchDetails(app){
-    this.loading = true;
-    this.dialogMsg = "Loading details...";
-    this.draw();
-    try {
-      const res = await fetch(app.metaUrl);
-      const meta = await res.json();
-      app.name = meta.name || app.name;
-      app.author = meta.author || "Unknown";
-      app.version = meta.version || "1.0.0";
-      app.description = meta.description || "No description provided.";
-      app.packageName = meta.packageName || app.id;
-    } catch(e){}
-    this.loading = false;
-    this.state = 2;
-    this.draw();
-  }
-
-  async installApp(app){
-    this.loading = true;
-    this.dialogMsg = "Installing " + app.name + "...";
-    this.draw();
-    try {
-      const resMeta = await fetch(app.metaUrl);
-      const meta = await resMeta.json();
-      const resCode = await fetch(app.appUrl);
-      const code = await resCode.text();
-
-      const pkg = meta.packageName || app.id;
-      const dir = "/local/apps/" + pkg;
-      this.sim.vfs.mkdir(dir);
-      this.sim.vfs.writeTextFile(dir + "/app.json", JSON.stringify(meta, null, 2));
-      this.sim.vfs.writeTextFile(dir + "/main.js", code);
-
-      log(`[AppStore] Installed ${meta.name || app.name} successfully!`, "ok");
-      this.dialogMsg = `${meta.name || app.name}\nInstalled Successfully!`;
-      this.state = 3;
-      this.sim.launcher.scanApps();
-    } catch(e) {
-      this.dialogMsg = "Install error: " + e.message;
-      this.state = 3;
-    }
-    this.loading = false;
-    this.draw();
-  }
-
-  draw(){
-    const d = this.sim.disp;
-    d.fillScreen(TFT_BLACK);
-    d.drawRoundRect(3, 3, 234, 314, 5, TFT_WHITE);
-    d.fillRoundRect(6, 6, 228, 30, 5, TFT_BLACK);
-    d.drawRoundRect(6, 6, 228, 30, 5, TFT_GREEN);
-    d.setTextColor(TFT_GREEN, TFT_BLACK);
-    d.setTextDatum(MC_DATUM);
-
-    let header = 'App Store';
-    if (this.state === 1) header = this.currentCategoryName;
-    else if (this.state === 2) header = 'App Details';
-    else if (this.state === 3) header = 'Notice';
-    d.drawString(header, 120, 21, 2);
-
-    d.fillRect(10, 45, 220, 230, TFT_BLACK);
-
-    if (this.loading) {
-      d.setTextColor(TFT_YELLOW, TFT_BLACK);
-      d.drawString(this.dialogMsg, 120, 160, 2);
-      return;
-    }
-
-    if (this.state === 0) {
-      if (this.categories.length === 0) {
-        this.fetchCategories();
+  };
+}
+function buildWebSocketClass(sim){
+  return class KryonWebSocket{
+    constructor(url,protocol,extraHeaders){
+      this.url=String(url);this.protocol=protocol||'';this.readyState=0;
+      this._onopen=null;this._onmessage=null;this._onerror=null;this._onclose=null;
+      if(sim.sim.weather==='offline'){
+        log(`[WS] Simulator offline — ${url}`,'warn');
+        setTimeout(()=>{this.readyState=3;if(this._onclose)try{this._onclose({code:1006,reason:'offline',wasClean:false});}catch(e){}},0);
         return;
       }
-      for (let i = 0; i < 7; i++){
-        const idx = this.scrollOffset + i;
-        if (idx >= this.categories.length) break;
-        const y = 45 + i * 30;
-        const label = this.categories[idx].name;
-
-        if (idx === this.selectedCatIdx){
-          d.fillRect(10, y, 220, 25, TFT_WHITE);
-          d.setTextColor(TFT_BLACK, TFT_WHITE);
-          d.setTextDatum(ML_DATUM);
-          d.drawString('> ' + label, 15, y + 12, 2);
-        } else {
-          d.setTextColor(TFT_WHITE, TFT_BLACK);
-          d.setTextDatum(ML_DATUM);
-          d.drawString('  ' + label, 15, y + 12, 2);
+      try{
+        this._ws=new window.WebSocket(this.url,this.protocol);
+        this._ws.onopen=()=>{this.readyState=1;if(this._onopen)try{this._onopen({});}catch(e){}};
+        this._ws.onmessage=ev=>{if(this._onmessage)try{this._onmessage({data:ev.data,isBinary:typeof ev.data!=='string'});}catch(e){}};
+        this._ws.onerror=()=>{if(this._onerror)try{this._onerror({message:'WS error'});}catch(e){}};
+        this._ws.onclose=ev=>{this.readyState=3;if(this._onclose)try{this._onclose({code:ev.code,reason:ev.reason,wasClean:ev.wasClean});}catch(e){}};
+      }catch(e){log(`[WS] ${url}: ${e.message}`,'err');this.readyState=3;}
+    }
+    set onopen(f){this._onopen=f;}get onopen(){return this._onopen;}
+    set onmessage(f){this._onmessage=f;}get onmessage(){return this._onmessage;}
+    set onerror(f){this._onerror=f;}get onerror(){return this._onerror;}
+    set onclose(f){this._onclose=f;}get onclose(){return this._onclose;}
+    send(d){if(this._ws&&this._ws.readyState===1)this._ws.send(d instanceof Uint8Array?d:String(d));}
+    close(code=1000,reason=''){if(this._ws)this._ws.close(code,reason);this.readyState=3;}
+    poll(){}
+  };
+}
+function buildIPC(sim){
+  const apps=new Map();const msgQ=[];let onMsg=null;let curApp='';let args='';
+  return {
+    _setCurrentAppId:id=>{curApp=id;},
+    _setLaunchArgs:a=>{args=a;},
+    registerApp:(id,path,name,cat,assoc=[],allow=true)=>{apps.set(id,{appId:id,appPath:path,name,category:cat,fileAssociations:assoc,allowCompanionLaunch:allow});},
+    launch:(target,argObj)=>{
+      const a=apps.get(target);
+      if(!a){sim.notif.post('Launch Error','App not found: '+target,'error');return false;}
+      sim.pendingLaunch={path:a.appPath,args:JSON.stringify(argObj||{})};
+      throw Object.assign(new Error('OS_EXIT'),{code:'OS_EXIT'});
+    },
+    openFile:filePath=>{
+      const ext=filePath.toLowerCase().split('.').pop();
+      for(const a of apps.values()){
+        if(a.fileAssociations.some(x=>x.toLowerCase().replace(/^\./,'')===ext)){
+          sim.pendingLaunch={path:a.appPath,args:JSON.stringify({filePath})};
+          throw Object.assign(new Error('OS_EXIT'),{code:'OS_EXIT'});
         }
       }
-      this._drawFooter();
-    } else if (this.state === 1) {
-      for (let i = 0; i < 7; i++){
-        const idx = this.scrollOffset + i;
-        if (idx >= this.currentApps.length) break;
-        const y = 45 + i * 30;
-        const label = this.currentApps[idx].name;
+      sim.notif.post('File Open Error','No handler for '+ext,'warning');
+      return false;
+    },
+    getLaunchArgs:()=>{if(!args||args==='{}'||args==='null')return null;try{return JSON.parse(args);}catch(e){return null;}},
+    send:(target,action,payload)=>{msgQ.push({from:curApp,to:target,action,payload});return true;},
+    onMessage:cb=>{onMsg=cb;},
+    _dispatch:()=>{
+      if(!onMsg)return;
+      const rem=[];
+      for(const m of msgQ){
+        if(m.to===curApp||m.to==='*'){try{onMsg(m.from,m.action,m.payload);}catch(e){log('[IPC] '+e.message,'err');}}
+        else rem.push(m);
+      }
+      msgQ.length=0;msgQ.push(...rem);
+    },
+    _clear:()=>{onMsg=null;msgQ.length=0;}
+  };
+}
+function buildAI(){
+  const fake=p=>`[Simulated KryonAI]\n\nYou asked: "${String(p).substring(0,80)}"\n\nThe KryonCloud gateway is unreachable in the browser emulator. On real hardware this forwards to kryonos.harislab.tech/api/services/ai with your device credential.`;
+  return {
+    stream:async(prompt,onToken,onComplete)=>{
+      const text=fake(prompt);
+      for(let i=0;i<text.length;i+=4){await sleep(30);if(onToken)try{onToken(text.substring(i,i+4));}catch(e){}}
+      if(onComplete)try{onComplete(text,{dailyUsed:1,dailyLimit:100,remaining:99,creditsDeducted:1});}catch(e){}
+      return true;
+    },
+    ask:async(prompt,cb)=>{
+      await sleep(500);const text=fake(prompt);
+      if(cb)try{cb(null,text,{dailyUsed:1,dailyLimit:100,remaining:99,creditsDeducted:1});}catch(e){}
+      return text;
+    },
+    extract:async(prompt,input,schema,cb)=>{
+      await sleep(400);
+      let r={};try{r=JSON.parse(schema);}catch(e){r={result:'extracted'};}
+      if(cb)try{cb(null,r);}catch(e){}
+      return r;
+    },
+    vision:async(prompt,cb)=>{
+      await sleep(600);const text='[Simulated vision] A KryonOS device screenshot.';
+      if(cb)try{cb(null,text);}catch(e){}
+      return text;
+    },
+    status:()=>({connected:false,gatewayOk:false,paired:false,userName:'',beamHandle:'',dailyUsed:0,dailyLimit:100,remaining:100,percentUsed:0,error:'Emulator: cloud not reachable'})
+  };
+}
+function buildSystem(sim,disp,keyboard,notif,pwm,i2c,crypto,ipc,ai,net,httpserver,kryon3D){
+  const startTime=Date.now();
+  const fastMath=buildFastMath();
+  const scope=sim.sim;
+  function pushTouch(){
+    if(sim.exitRequested)throw Object.assign(new Error('OS_EXIT'),{code:'OS_EXIT'});
+    if(keyboard.active)return {x:0,y:0,touched:false};
+    const t=sim.touch;
+    if((t.touched||t.justPressed)&&t.x>=200&&t.y<=40)throw Object.assign(new Error('OS_EXIT'),{code:'OS_EXIT'});
+    const was=t.touched||t.justPressed;
+    t.justPressed=false;
+    return {x:t.x,y:t.y,touched:was};
+  }
+  return {
+    // Display
+    fillScreen:c=>disp.fillScreen(c),
+    fillRect:(x,y,w,h,c)=>disp.fillRect(x,y,w,h,c),
+    drawRect:(x,y,w,h,c)=>disp.drawRect(x,y,w,h,c),
+    drawFastHLine:(x,y,w,c)=>disp.drawFastHLine(x,y,w,c),
+    drawFastVLine:(x,y,h,c)=>disp.drawFastVLine(x,y,h,c),
+    drawLine:(a,b,c,d,e)=>disp.drawLine(a,b,c,d,e),
+    drawPixel:(x,y,c)=>disp.drawPixel(x,y,c),
+    drawCircle:(x,y,r,c)=>disp.drawCircle(x,y,r,c),
+    fillCircle:(x,y,r,c)=>disp.fillCircle(x,y,r,c),
+    drawTriangle:(...a)=>disp.drawTriangle(...a),
+    fillTriangle:(...a)=>disp.fillTriangle(...a),
+    drawRoundRect:(...a)=>disp.drawRoundRect(...a),
+    fillRoundRect:(...a)=>disp.fillRoundRect(...a),
+    drawString:(s,x,y,f=2)=>disp.drawString(s,x,y,f),
+    setTextColor:(f,b)=>disp.setTextColor(f,b),
+    setTextDatum:d=>disp.setTextDatum(d),
+    setTextSize:s=>disp.setTextSize(s),
+    color:(r,g,b)=>disp.color(r,g,b),
+    screenWidth:()=>disp.W,
+    screenHeight:()=>disp.H,
+    // Sprites
+    createSprite:(w,h)=>{disp.activeSprite=new VirtualSprite(w,h);return true;},
+    deleteSprite:()=>{disp.activeSprite=null;},
+    pushSprite:(x,y)=>{if(disp.activeSprite)disp.ctx.drawImage(disp.activeSprite.canvas,x,y);},
+    bindSprite:en=>{if(!en)disp.activeSprite=null;},
+    // Touch & time
+    getTouch:pushTouch,
+    millis:()=>Date.now()-startTime,
+    micros:()=>(Date.now()-startTime)*1000,
+    delay:async ms=>{
+      const cap=clamp(ms|0,0,30000);
+      const s=Date.now();
+      while(Date.now()-s<cap){
+        if(sim.exitRequested)throw Object.assign(new Error('OS_EXIT'),{code:'OS_EXIT'});
+        await sleep(10);
+        ipc._dispatch();
+      }
+      ipc._dispatch();
+    },
+    delayMicroseconds:async us=>{await sleep(Math.max(1,(us/1000)|0));},
+    // Logging
+    print:(...a)=>log(a.join(' '),'info'),
+    println:(...a)=>log(a.join(' '),'info'),
+    // Info
+    getInfo:()=>({totalRAM:512*1024,freeRAM:384*1024,minFreeRAM:200*1024,maxAllocRAM:160*1024,cpuFreqMHz:240,chipModel:scope.board.chip,chipCores:2,chipRevision:0,flashSize:16*1024*1024,uptimeMs:Date.now()-startTime}),
+    getTemperature:()=>42.5,
+    hasTemperatureSensor:()=>true,
+    restart:()=>{log('[System] restart()','warn');sim.reboot();},
+    getOSVersion:()=>KRYONOS_VERSION,
+    getAPILevel:()=>KRYONOS_API_LEVEL,
+    getIPAddress:()=>net.getIP(),
+    isWiFiActive:()=>scope.wifi,
+    // Time
+    getTime:()=>new Date().toLocaleTimeString('en-GB',{hour12:false}),
+    getSeconds:()=>new Date().getSeconds(),
+    getDate:()=>new Date().toLocaleDateString('en-GB'),
+    getYear:()=>new Date().getFullYear(),
+    getMonth:()=>new Date().getMonth()+1,
+    getDay:()=>new Date().getDate(),
+    getTimezone:()=>scope.timezone,
+    // Prompt & notify
+    prompt:(msg,init)=>keyboard.show(msg,init,30),
+    notify:(a,b,c,d)=>{
+      if(a&&typeof a==='object'&&!Array.isArray(a))
+        return notif.post(a.title||'Notification',a.message||'',a.icon||'info',a.duration||3000);
+      return notif.post(a||'Notification',b||'',c||'info',d||3000);
+    },
+    // Buses
+    gpio:{
+      pinMode:()=>{},digitalWrite:()=>{},digitalRead:()=>0,analogRead:()=>512,analogWrite:()=>{},pulseIn:()=>0,
+      OUTPUT:1,INPUT:0,INPUT_PULLUP:2,HIGH:1,LOW:0
+    },
+    i2c,pwm,crypto,math:fastMath,ipc,ai,
+    graphics3d:{
+      begin:(w,h)=>kryon3D.begin(w,h),
+      clear:c=>kryon3D.clear(c),
+      render:(x,y)=>sim.render3D(x,y),
+      flush:(x,y)=>sim.render3D(x,y),
+      end:()=>kryon3D.end(),
+      setViewport:(x,y,w,h)=>kryon3D.setViewport(x,y,w,h),
+      setCamera:(...a)=>kryon3D.setCamera(...a),
+      setLight:(...a)=>kryon3D.setLight(...a),
+      setFog:(...a)=>kryon3D.setFog(...a),
+      drawLine:(...a)=>kryon3D.drawLine(...a),
+      drawTriangle:(...a)=>kryon3D.drawTriangle(...a),
+      fillTriangle:(...a)=>kryon3D.fillTriangle(...a),
+      drawCube:(...a)=>kryon3D.drawCube(...a),
+      drawBillboard:(...a)=>kryon3D.drawBillboard(...a),
+      drawMesh:(...a)=>kryon3D.drawMesh(...a),
+      getWidth:()=>kryon3D.getWidth(),
+      getHeight:()=>kryon3D.getHeight(),
+      directDraw:v=>kryon3D.directDraw(v)
+    }
+  };
+}
+function buildFS(sim){
+  const SYS='/local/system';
+  const vfs=sim.vfs;
+  const grants=sim.permissions;
+  let sandbox='';
+  function setSandbox(r){sandbox=r?(r.endsWith('/')?r:r+'/'):'';}
+  function resolve(p){
+    if(!p)return '';
+    let s=String(p);
+    if(!s.startsWith('/')&&!s.startsWith('local/')&&!s.startsWith('sd/'))s=sandbox+s;
+    return s.replace(/\/+/g,'/');
+  }
+  function isSys(p){
+    if(!p)return true;
+    if(p.includes('..'))return true;
+    if(p.startsWith(SYS))return true;
+    if(p.endsWith('/app_permissions.json'))return true;
+    if(p.endsWith('/wifi_credentials.enc'))return true;
+    return false;
+  }
+  function allowed(p){
+    if(!sandbox)return true;
+    const r=resolve(p);
+    if(isSys(r))return false;
+    if(r.startsWith(sandbox))return true;
+    const pkg=sim.currentPkg||'';
+    if(grants.has(pkg+':storage'))return true;
+    log(`[FS] Denied: "${r}" requires storage permission (would prompt on device)`,'warn');
+    return false;
+  }
+  return {
+    _setSandboxRoot:setSandbox,
+    readTextFile:p=>allowed(p)?vfs.read(resolve(p)):null,
+    writeTextFile:(p,c)=>allowed(p)?vfs.write(resolve(p),c):false,
+    appendTextFile:(p,c)=>allowed(p)?vfs.append(resolve(p),c):false,
+    deleteFile:p=>allowed(p)?vfs.remove(resolve(p)):false,
+    renameFile:(a,b)=>allowed(a)&&allowed(b)?vfs.rename(resolve(a),resolve(b)):false,
+    exists:p=>allowed(p)?vfs.exists(resolve(p)):false,
+    listDir:p=>allowed(p)?vfs.listDir(resolve(p)):[],
+    mkdir:p=>allowed(p)?vfs.mkdir(resolve(p)):false,
+    rmdir:p=>allowed(p)?vfs.remove(resolve(p)):false,
+    isDirectory:p=>allowed(p)?vfs.isDir(resolve(p)):false,
+    isFile:p=>allowed(p)?vfs.isFile(resolve(p)):false,
+    getFileSize:p=>allowed(p)?vfs.size(resolve(p)):0,
+    getTotalSpace:()=>vfs.totalSpace(),
+    getUsedSpace:()=>vfs.usedSpace(),
+    getFreeSpace:()=>vfs.freeSpace(),
+    getFileMD5:p=>allowed(p)?vfs.md5(resolve(p)):'',
+    mountSD:()=>{log('[FS] mountSD emulated','dim');return true;},
+    unmountSD:()=>{log('[FS] unmountSD emulated','dim');}
+  };
+}
 
-        if (idx === this.selectedAppIdx){
-          d.fillRect(10, y, 220, 25, TFT_WHITE);
-          d.setTextColor(TFT_BLACK, TFT_WHITE);
-          d.setTextDatum(ML_DATUM);
-          d.drawString('> ' + label, 15, y + 12, 2);
-        } else {
-          d.setTextColor(TFT_WHITE, TFT_BLACK);
-          d.setTextDatum(ML_DATUM);
-          d.drawString('  ' + label, 15, y + 12, 2);
+/* ─── 12. SCREENS ─────────────────────────────────────────────── */
+class LauncherScreen{
+  constructor(sim){this.sim=sim;this.sel=1;this.scroll=0;this.apps=[];}
+  scan(){
+    this.apps=[];
+    for(const d of ['/local/apps','/sd/apps']){
+      if(!this.sim.vfs.isDir(d))continue;
+      for(const e of this.sim.vfs.listDirFull(d)){
+        if(e.isDir){
+          const jp=e.path+'/app.json';
+          if(this.sim.vfs.exists(jp)){
+            try{
+              const o=JSON.parse(this.sim.vfs.read(jp));
+              const n=o.name||e.name;
+              if(!this.apps.find(a=>a.name===n))
+                this.apps.push({name:n,path:e.path,pkg:o.packageName||e.name,meta:o});
+            }catch(err){}
+          }
+        }else if(e.name.endsWith('.js')){
+          if(!this.apps.find(a=>a.name===e.name))
+            this.apps.push({name:e.name,path:e.path,pkg:e.name,meta:null,isLegacy:true});
         }
       }
-      this._drawFooter();
-    } else if (this.state === 2) {
-      const a = this.currentApps[this.selectedAppIdx];
-      if (!a) { this.state = 1; this.draw(); return; }
-
-      d.setTextDatum(TL_DATUM);
-      d.setTextColor(TFT_WHITE, TFT_BLACK);
-      d.drawString('Name:    ' + a.name, 15, 55, 2);
-      d.drawString('Author:  ' + a.author, 15, 78, 2);
-      d.drawString('Version: ' + a.version, 15, 101, 2);
-      d.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
-      d.drawString('Desc: ' + String(a.description).substring(0, 55), 15, 130, 2);
-
-      d.setTextDatum(MC_DATUM);
-      d.fillRoundRect(25, 230, 80, 30, 4, TFT_GREEN);
-      d.setTextColor(TFT_BLACK, TFT_GREEN);
-      d.drawString('INSTALL', 65, 245, 2);
-
-      d.fillRoundRect(135, 230, 80, 30, 4, TFT_RED);
-      d.setTextColor(TFT_WHITE, TFT_RED);
-      d.drawString('CANCEL', 175, 245, 2);
-    } else if (this.state === 3) {
-      d.fillRoundRect(10, 80, 220, 140, 6, TFT_DARKGREY);
-      d.setTextColor(TFT_WHITE, TFT_DARKGREY);
-      d.setTextDatum(MC_DATUM);
-      const lines = this.dialogMsg.split('\n');
-      for (let i = 0; i < lines.length; i++) {
-        d.drawString(lines[i], 120, 120 + i * 20, 2);
-      }
-      d.fillRoundRect(85, 175, 70, 30, 4, TFT_BLUE);
-      d.setTextColor(TFT_WHITE, TFT_BLUE);
-      d.drawString('OK', 120, 190, 2);
     }
   }
-
-  _drawFooter(){
-    const d = this.sim.disp;
-    d.drawRoundRect(5, 285, 230, 30, 5, TFT_WHITE);
-    d.setTextColor(TFT_WHITE, TFT_BLACK);
-    d.setTextDatum(MC_DATUM);
-    d.drawString('BACK', 35, 300, 2);  d.drawString('|', 70, 300, 2);
-    d.drawString('UP', 100, 300, 2);   d.drawString('|', 130, 300, 2);
-    d.drawString('SEL', 165, 300, 2);  d.drawString('|', 200, 300, 2);
-    d.drawString('DN', 220, 300, 2);
+  total(){return this.apps.length+7;}
+  draw(){
+    const d=this.sim.disp;
+    d.fillScreen(TFT_BLACK);
+    d.drawRoundRect(3,3,234,314,5,TFT_WHITE);
+    d.fillRoundRect(6,6,228,30,5,TFT_BLACK);
+    d.drawRoundRect(6,6,228,30,5,TFT_GREEN);
+    d.setTextColor(TFT_GREEN,TFT_BLACK);
+    d.setTextDatum(4);
+    d.drawString('KryonOS Home',120,21,2);
+    d.fillRect(10,45,220,230,TFT_BLACK);
+    const total=this.total();const pp=7;
+    for(let i=0;i<pp;i++){
+      const idx=this.scroll+i;if(idx>=total)break;
+      const y=45+i*30;
+      let name='',hdr=false;
+      if(idx===0){name='[ SYSTEM ]';hdr=true;}
+      else if(idx===1)name='App Store';
+      else if(idx===2)name='App Installer';
+      else if(idx===3)name='Kryon Cloud';
+      else if(idx===4)name='Settings';
+      else if(idx===5)name='Help Center';
+      else if(idx===6){name='[ APPS ]';hdr=true;}
+      else name=this.apps[idx-7].name;
+      if(hdr){
+        d.setTextColor(TFT_DARKGREY,TFT_BLACK);d.setTextDatum(3);
+        d.drawString(name,15,y+12,2);
+      }else if(idx===this.sel){
+        d.fillRect(10,y,220,25,TFT_WHITE);
+        d.setTextColor(TFT_BLACK,TFT_WHITE);d.setTextDatum(3);
+        d.drawString('> '+name,15,y+12,2);
+      }else{
+        d.setTextColor(TFT_WHITE,TFT_BLACK);d.setTextDatum(3);
+        d.drawString('  '+name,15,y+12,2);
+      }
+    }
+    if(total>pp){
+      const sbH=Math.max(16,(230*pp)/total);
+      const sbY=45+(this.scroll*(230-sbH))/Math.max(1,total-pp);
+      d.fillRect(231,45,3,230,TFT_DARKGREY);
+      d.fillRect(231,sbY,3,sbH,TFT_WHITE);
+    }
+    d.drawRoundRect(5,285,230,30,5,TFT_WHITE);
+    d.setTextColor(TFT_WHITE,TFT_BLACK);d.setTextDatum(4);
+    d.drawString('UP',30,300,2);d.drawString('|',60,300,2);
+    d.drawString('SEL',120,300,2);d.drawString('|',180,300,2);
+    d.drawString('DN',210,300,2);
   }
-
-  handleTouch(x, y){
-    if (this.loading) return;
-
-    if (this.state === 3){
-      if (x >= 85 && x <= 155 && y >= 175 && y <= 210){
-        this.state = 0; this.draw();
+  handleTouch(x,y){
+    const total=this.total();const pp=7;
+    if(y>=45&&y<=270){
+      const c=this.scroll+Math.floor((y-45)/30);
+      if(c<total&&c!==0&&c!==6){this.sel=c;this.draw();this.execute();}
+      return;
+    }
+    if(y>=285){
+      if(x<60){
+        if(this.sel>1){
+          this.sel--;
+          if(this.sel===6)this.sel--;
+          if(this.sel<this.scroll)this.scroll=this.sel;
+          if(this.sel===1)this.scroll=0;
+          this.draw();
+        }
+      }else if(x>60&&x<180)this.execute();
+      else if(x>180){
+        if(this.sel<total-1){
+          this.sel++;
+          if(this.sel===6)this.sel++;
+          if(this.sel>=this.scroll+pp)this.scroll=this.sel-pp+1;
+          this.draw();
+        }
+      }
+    }
+  }
+  execute(){
+    const s=this.sel;
+    if(s===1)this.sim.setState(S.APP_STORE);
+    else if(s===2)this.sim.setState(S.INSTALLER);
+    else if(s===3)this.sim.setState(S.KRYON_CLOUD);
+    else if(s===4)this.sim.setState(S.SETTINGS);
+    else if(s===5)this.sim.setState(S.HELP_CENTER);
+    else if(s>6&&this.apps[s-7])this.sim.launchApp(this.apps[s-7]);
+  }
+}
+class SettingsScreen{
+  constructor(sim){this.sim=sim;}
+  draw(){
+    const d=this.sim.disp;
+    d.fillScreen(TFT_BLACK);
+    d.drawRoundRect(3,3,234,314,5,TFT_WHITE);
+    d.fillRoundRect(6,6,228,30,5,TFT_BLACK);
+    d.drawRoundRect(6,6,228,30,5,TFT_GREEN);
+    d.setTextColor(TFT_GREEN,TFT_BLACK);d.setTextDatum(4);
+    d.drawString('Settings Menu',120,21,2);
+    const items=[
+      ['WiFi Options',TFT_BLUE,S.SETTINGS_WIFI],
+      ['Touch Calibrator',TFT_ORANGE,S.CALIBRATOR],
+      ['Manage Apps',TFT_PURPLE,S.SETTINGS_APPS],
+      ['Permissions Manager',0x03E0,S.SETTINGS_PERMISSIONS],
+      ['Time & Region',TFT_CYAN,S.SETTINGS_TIME],
+      ['About Device',TFT_DARKGREY,S.SETTINGS_ABOUT],
+      ['System Updates',TFT_RED,S.UPDATER_MANUAL]
+    ];
+    let y=40;
+    items.forEach(([t,c])=>{
+      d.fillRoundRect(20,y,200,30,4,c);
+      d.setTextColor(c===TFT_CYAN?TFT_BLACK:TFT_WHITE,c);
+      d.drawString(t,120,y+15,2);
+      y+=34;
+    });
+    d.drawRoundRect(5,285,230,30,5,TFT_WHITE);
+    d.setTextColor(TFT_WHITE,TFT_BLACK);
+    d.drawString('BACK',120,300,2);
+  }
+  handleTouch(x,y){
+    if(x>=20&&x<=220){
+      if(y>=40&&y<=70)this.sim.setState(S.SETTINGS_WIFI);
+      else if(y>=74&&y<=104)this.sim.setState(S.CALIBRATOR);
+      else if(y>=108&&y<=138)this.sim.setState(S.SETTINGS_APPS);
+      else if(y>=142&&y<=172)this.sim.setState(S.SETTINGS_PERMISSIONS);
+      else if(y>=176&&y<=206)this.sim.setState(S.SETTINGS_TIME);
+      else if(y>=210&&y<=240)this.sim.setState(S.SETTINGS_ABOUT);
+      else if(y>=244&&y<=274)this.sim.setState(S.UPDATER_MANUAL);
+    }
+    if(y>=285)this.sim.setState(S.LAUNCHER);
+  }
+}
+class AboutScreen{
+  constructor(sim){this.sim=sim;}
+  draw(){
+    const d=this.sim.disp;
+    d.fillScreen(TFT_BLACK);
+    d.drawRoundRect(3,3,234,314,5,TFT_WHITE);
+    d.fillRoundRect(6,6,228,28,5,TFT_BLACK);
+    d.drawRoundRect(6,6,228,28,5,TFT_GREEN);
+    d.setTextColor(TFT_GREEN,TFT_BLACK);d.setTextDatum(4);
+    d.drawString('About Device',120,20,2);
+    d.fillRoundRect(10,40,220,100,6,0x10A2);
+    d.drawRoundRect(10,40,220,100,6,0x2945);
+    d.setTextDatum(0);
+    d.setTextColor(TFT_GREEN,0x10A2);
+    d.drawString('KryonOS v'+KRYONOS_VERSION,18,48,2);
+    d.setTextColor(TFT_CYAN,0x10A2);
+    d.drawString(`Flash: 16 MB (${Math.round(this.sim.vfs.freeSpace()/1024)} KB free)`,18,70,2);
+    d.setTextColor(TFT_ORANGE,0x10A2);
+    d.drawString('SD:    Virtual (mounted)',18,92,2);
+    d.setTextColor(TFT_MAGENTA,0x10A2);
+    d.drawString('RAM:   512 KB SRAM + 8 MB PSRAM',18,114,2);
+    d.fillRoundRect(10,148,220,80,6,0x10A2);
+    d.drawRoundRect(10,148,220,80,6,0x05BF);
+    d.setTextColor(TFT_YELLOW,0x10A2);
+    d.drawString('GitHub: Haris16-code/KryonOS',18,156,2);
+    d.setTextColor(TFT_WHITE,0x10A2);
+    d.drawString('Author: Haris (@Haris16-code)',18,178,2);
+    d.setTextColor(TFT_GREEN,0x10A2);
+    d.drawString('License: MIT Open Source',18,200,2);
+    d.setTextDatum(4);
+    d.fillRoundRect(40,240,160,32,4,TFT_RED);
+    d.setTextColor(TFT_WHITE,TFT_RED);
+    d.drawString('Reset App Data',120,256,2);
+    d.drawRoundRect(5,285,230,30,5,TFT_WHITE);
+    d.setTextColor(TFT_WHITE,TFT_BLACK);
+    d.drawString('BACK',120,300,2);
+  }
+  handleTouch(x,y){
+    if(y>=240&&y<=272){if(confirm('Format virtual flash and restore defaults?'))this.sim.vfs.reset().then(()=>this.sim.reboot());}
+    else if(y>=285)this.sim.setState(S.SETTINGS);
+  }
+}
+class AppStoreScreen{
+  constructor(sim){
+    this.sim=sim;this.state=0;
+    this.INDEX='https://raw.githubusercontent.com/Haris16-code/KryonOS-AppStore/refs/heads/main/index.json';
+    this.cats=[];this.apps=[];this.catName='';this.selCat=0;this.selApp=0;this.scroll=0;this.dialog='';this.loading=false;
+  }
+  async fetchCats(){
+    this.loading=true;this.dialog='Fetching App Store...';this.draw();
+    try{
+      const res=await fetch(this.INDEX);const data=await res.json();
+      this.cats=[{name:'[ Check For Apps Update ]',url:'UPDATE_ACTION'}];
+      if(data&&data.categories)for(const [name,url] of Object.entries(data.categories))
+        this.cats.push({name,url:String(url)});
+      this.loading=false;this.draw();
+    }catch(e){this.dialog='Store Offline: '+e.message;this.state=3;this.loading=false;this.draw();}
+  }
+  async fetchCatApps(url){
+    if(url==='UPDATE_ACTION'){this.dialog='All apps are up to date (emulator).';this.state=3;this.draw();return;}
+    this.loading=true;this.dialog='Loading '+this.catName+'...';this.draw();
+    try{
+      const res=await fetch(url);const data=await res.json();this.apps=[];
+      if(data&&data.apps)for(const [id,info] of Object.entries(data.apps)){
+        this.apps.push({
+          id,name:id.charAt(0).toUpperCase()+id.slice(1),
+          metaUrl:info.meta,appUrl:info.app,
+          metaSha256:info.meta_sha256||info.metaSha256||'',
+          appSha256:info.app_sha256||info.appSha256||'',
+          author:'?',version:'1.0.0',description:'Tap to load details'
+        });
+      }
+      this.state=1;this.selApp=0;this.scroll=0;this.loading=false;this.draw();
+    }catch(e){this.dialog='Failed: '+e.message;this.state=3;this.loading=false;this.draw();}
+  }
+  async fetchDetails(app){
+    this.loading=true;this.dialog='Loading details...';this.draw();
+    try{
+      const res=await fetch(app.metaUrl);const meta=await res.json();
+      Object.assign(app,{name:meta.name||app.name,author:meta.author||'Unknown',version:meta.version||'1.0.0',description:meta.description||'No description',packageName:meta.packageName||app.id,permissions:meta.permissions||[],meta});
+    }catch(e){}
+    this.loading=false;this.state=2;this.draw();
+  }
+  async installApp(app){
+    this.loading=true;this.dialog='Downloading '+app.name+'...';this.draw();
+    try{
+      const metaRes=await fetch(app.metaUrl);const metaText=await metaRes.text();
+      if(app.metaSha256){
+        const c=await this.sim.env.Crypto.sha256(metaText);
+        if(c.toLowerCase()!==app.metaSha256.toLowerCase())throw new Error('Meta SHA-256 mismatch');
+      }else log('[AppStore] WARNING: no meta_sha256 in index','warn');
+      const meta=JSON.parse(metaText);
+      const codeRes=await fetch(app.appUrl);const codeText=await codeRes.text();
+      if(app.appSha256){
+        const c=await this.sim.env.Crypto.sha256(codeText);
+        if(c.toLowerCase()!==app.appSha256.toLowerCase())throw new Error('App SHA-256 mismatch');
+      }else log('[AppStore] WARNING: no app_sha256 in index','warn');
+      const reqApi=meta.api||1;
+      if(reqApi>KRYONOS_API_LEVEL)throw new Error(`App requires API ${reqApi}, this OS is API ${KRYONOS_API_LEVEL}`);
+      const pkg=meta.packageName||app.id;
+      const dir='/local/apps/'+pkg;
+      this.sim.vfs.mkdir(dir);
+      this.sim.vfs.write(dir+'/app.json',JSON.stringify(meta,null,2));
+      this.sim.vfs.write(dir+'/main.js',codeText);
+      log(`[AppStore] Installed ${meta.name} (${pkg}) v${meta.version}`,'ok');
+      this.dialog=`${meta.name}\nv${meta.version}\n\nInstalled successfully!`;
+      this.state=3;
+      this.sim.launcher.scan();
+      this.sim.refreshAppList();
+    }catch(e){
+      log('[AppStore] Install failed: '+e.message,'err');
+      this.dialog='Install error:\n'+e.message;
+      this.state=3;
+    }
+    this.loading=false;this.draw();
+  }
+  draw(){
+    const d=this.sim.disp;
+    d.fillScreen(TFT_BLACK);
+    d.drawRoundRect(3,3,234,314,5,TFT_WHITE);
+    d.fillRoundRect(6,6,228,30,5,TFT_BLACK);
+    d.drawRoundRect(6,6,228,30,5,TFT_GREEN);
+    d.setTextColor(TFT_GREEN,TFT_BLACK);d.setTextDatum(4);
+    let h='App Store';
+    if(this.state===1)h=this.catName;
+    else if(this.state===2)h='App Details';
+    else if(this.state===3)h='Notice';
+    d.drawString(h,120,21,2);
+    d.fillRect(10,45,220,230,TFT_BLACK);
+    if(this.loading){d.setTextColor(TFT_YELLOW,TFT_BLACK);d.setTextDatum(4);d.drawString(this.dialog,120,160,2);return;}
+    if(this.state===0){
+      if(!this.cats.length){this.fetchCats();return;}
+      for(let i=0;i<7;i++){
+        const idx=this.scroll+i;if(idx>=this.cats.length)break;
+        const y=45+i*30;
+        if(idx===this.selCat){
+          d.fillRect(10,y,220,25,TFT_WHITE);
+          d.setTextColor(TFT_BLACK,TFT_WHITE);d.setTextDatum(3);
+          d.drawString('> '+this.cats[idx].name,15,y+12,2);
+        }else{
+          d.setTextColor(TFT_WHITE,TFT_BLACK);d.setTextDatum(3);
+          d.drawString('  '+this.cats[idx].name,15,y+12,2);
+        }
+      }
+      this._footer();
+    }else if(this.state===1){
+      for(let i=0;i<7;i++){
+        const idx=this.scroll+i;if(idx>=this.apps.length)break;
+        const y=45+i*30;
+        if(idx===this.selApp){
+          d.fillRect(10,y,220,25,TFT_WHITE);
+          d.setTextColor(TFT_BLACK,TFT_WHITE);d.setTextDatum(3);
+          d.drawString('> '+this.apps[idx].name,15,y+12,2);
+        }else{
+          d.setTextColor(TFT_WHITE,TFT_BLACK);d.setTextDatum(3);
+          d.drawString('  '+this.apps[idx].name,15,y+12,2);
+        }
+      }
+      this._footer();
+    }else if(this.state===2){
+      const a=this.apps[this.selApp];
+      if(!a){this.state=1;this.draw();return;}
+      d.setTextDatum(0);d.setTextColor(TFT_WHITE,TFT_BLACK);
+      d.drawString('Name:    '+a.name,15,55,2);
+      d.drawString('Author:  '+a.author,15,78,2);
+      d.drawString('Version: '+a.version,15,101,2);
+      d.setTextColor(TFT_LIGHTGREY,TFT_BLACK);
+      d.drawString('Desc: '+String(a.description).substring(0,55),15,130,2);
+      d.setTextDatum(4);
+      d.fillRoundRect(25,230,80,30,4,TFT_GREEN);
+      d.setTextColor(TFT_BLACK,TFT_GREEN);d.drawString('INSTALL',65,245,2);
+      d.fillRoundRect(135,230,80,30,4,TFT_RED);
+      d.setTextColor(TFT_WHITE,TFT_RED);d.drawString('CANCEL',175,245,2);
+    }else if(this.state===3){
+      d.fillRoundRect(10,80,220,140,6,TFT_DARKGREY);
+      d.setTextColor(TFT_WHITE,TFT_DARKGREY);d.setTextDatum(4);
+      const lines=this.dialog.split('\n');
+      for(let i=0;i<lines.length;i++)d.drawString(lines[i],120,120+i*20,2);
+      d.fillRoundRect(85,175,70,30,4,TFT_BLUE);
+      d.setTextColor(TFT_WHITE,TFT_BLUE);d.drawString('OK',120,190,2);
+    }
+  }
+  _footer(){
+    const d=this.sim.disp;
+    d.drawRoundRect(5,285,230,30,5,TFT_WHITE);
+    d.setTextColor(TFT_WHITE,TFT_BLACK);d.setTextDatum(4);
+    d.drawString('BACK',35,300,2);d.drawString('|',70,300,2);
+    d.drawString('UP',100,300,2);d.drawString('|',130,300,2);
+    d.drawString('SEL',165,300,2);d.drawString('|',200,300,2);
+    d.drawString('DN',220,300,2);
+  }
+  handleTouch(x,y){
+    if(this.loading)return;
+    if(this.state===3){if(x>=85&&x<=155&&y>=175&&y<=210){this.state=0;this.draw();}return;}
+    if(this.state===2){
+      if(y>=230&&y<=260){
+        if(x>=25&&x<=105)this.installApp(this.apps[this.selApp]);
+        else if(x>=135&&x<=215){this.state=1;this.draw();}
       }
       return;
     }
-    if (this.state === 2){
-      if (y >= 230 && y <= 260){
-        if (x >= 25 && x <= 105) this.installApp(this.currentApps[this.selectedAppIdx]);
-        else if (x >= 135 && x <= 215) { this.state = 1; this.draw(); }
+    if(y>=45&&y<=270){
+      const list=this.state===0?this.cats:this.apps;
+      const c=this.scroll+Math.floor((y-45)/30);
+      if(c<list.length){
+        if(this.state===0){this.selCat=c;this.catName=list[c].name;this.fetchCatApps(list[c].url);}
+        else{this.selApp=c;this.fetchDetails(list[c]);}
       }
       return;
     }
-    if (y >= 45 && y <= 270){
-      const list = (this.state === 0) ? this.categories : this.currentApps;
-      const clicked = this.scrollOffset + Math.floor((y - 45) / 30);
-      if (clicked < list.length){
-        if (this.state === 0) {
-          this.selectedCatIdx = clicked;
-          this.currentCategoryName = list[clicked].name;
-          this.fetchCategoryApps(list[clicked].url);
-        } else {
-          this.selectedAppIdx = clicked;
-          this.fetchDetails(list[clicked]);
-        }
-      }
-      return;
-    }
-    if (y >= 285 && y <= 315){
-      if (x < 70){
-        if (this.state === 1) { this.state = 0; this.draw(); }
-        else this.sim.setState(STATE_LAUNCHER);
-      } else if (x >= 70 && x < 130){ // UP
-        if (this.state === 0 && this.selectedCatIdx > 0) {
-          this.selectedCatIdx--;
-          if (this.selectedCatIdx < this.scrollOffset) this.scrollOffset = this.selectedCatIdx;
-          this.draw();
-        } else if (this.state === 1 && this.selectedAppIdx > 0) {
-          this.selectedAppIdx--;
-          if (this.selectedAppIdx < this.scrollOffset) this.scrollOffset = this.selectedAppIdx;
-          this.draw();
-        }
-      } else if (x >= 130 && x < 200){ // SEL
-        if (this.state === 0) {
-          this.currentCategoryName = this.categories[this.selectedCatIdx].name;
-          this.fetchCategoryApps(this.categories[this.selectedCatIdx].url);
-        } else if (this.state === 1) {
-          this.fetchDetails(this.currentApps[this.selectedAppIdx]);
-        }
-      } else if (x >= 200){ // DN
-        if (this.state === 0 && this.selectedCatIdx < this.categories.length - 1) {
-          this.selectedCatIdx++;
-          if (this.selectedCatIdx >= this.scrollOffset + 7) this.scrollOffset++;
-          this.draw();
-        } else if (this.state === 1 && this.selectedAppIdx < this.currentApps.length - 1) {
-          this.selectedAppIdx++;
-          if (this.selectedAppIdx >= this.scrollOffset + 7) this.scrollOffset++;
-          this.draw();
-        }
+    if(y>=285){
+      if(x<70){if(this.state===1){this.state=0;this.draw();}else this.sim.setState(S.LAUNCHER);}
+      else if(x>=70&&x<130){
+        if(this.state===0&&this.selCat>0){this.selCat--;if(this.selCat<this.scroll)this.scroll=this.selCat;this.draw();}
+        else if(this.state===1&&this.selApp>0){this.selApp--;if(this.selApp<this.scroll)this.scroll=this.selApp;this.draw();}
+      }else if(x>=130&&x<200){
+        if(this.state===0){this.catName=this.cats[this.selCat].name;this.fetchCatApps(this.cats[this.selCat].url);}
+        else if(this.state===1)this.fetchDetails(this.apps[this.selApp]);
+      }else if(x>=200){
+        if(this.state===0&&this.selCat<this.cats.length-1){this.selCat++;if(this.selCat>=this.scroll+7)this.scroll++;this.draw();}
+        else if(this.state===1&&this.selApp<this.apps.length-1){this.selApp++;if(this.selApp>=this.scroll+7)this.scroll++;this.draw();}
       }
     }
   }
 }
+class HelpScreen{
+  constructor(sim){
+    this.sim=sim;this.state=0;this.sel=0;this.scroll=0;
+    this.offline=[
+      {title:'What is KryonOS',body:'KryonOS is a lightweight OS for ESP32 that runs JavaScript apps via the Duktape runtime, with an onboard app store and file manager.'},
+      {title:'Navigation',body:'Tap app names in the launcher to run them. Press the top-right X in any running app to exit back to the launcher.'},
+      {title:'WiFi Setup',body:'Go to Settings → WiFi Options. Scan, pick a network, type the password, then connect.'},
+      {title:'Troubleshooting',body:'If apps crash with "Out Of Ram" errors, disable WiFi to free internal RAM.'},
+      {title:'Installing Apps',body:'Use the App Store, or drop an app folder (with app.json + main.js) into /local/apps/ or /sd/apps/ and use the App Installer.'}
+    ];
+  }
+  draw(){
+    const d=this.sim.disp;
+    d.fillScreen(TFT_BLACK);
+    d.drawRoundRect(3,3,234,314,5,TFT_WHITE);
+    d.fillRoundRect(6,6,228,30,5,TFT_BLACK);
+    d.drawRoundRect(6,6,228,30,5,TFT_GREEN);
+    d.setTextColor(TFT_GREEN,TFT_BLACK);d.setTextDatum(4);
+    d.drawString(this.state===0?'Help Center':this.offline[this.sel].title,120,21,2);
+    d.fillRect(10,45,220,230,TFT_BLACK);
+    if(this.state===0){
+      for(let i=0;i<7;i++){
+        const idx=this.scroll+i;if(idx>=this.offline.length)break;
+        const y=45+i*30;
+        if(idx===this.sel){
+          d.fillRect(10,y,220,25,TFT_WHITE);
+          d.setTextColor(TFT_BLACK,TFT_WHITE);d.setTextDatum(3);
+          d.drawString('> '+this.offline[idx].title,15,y+12,2);
+        }else{
+          d.setTextColor(TFT_WHITE,TFT_BLACK);d.setTextDatum(3);
+          d.drawString('  '+this.offline[idx].title,15,y+12,2);
+        }
+      }
+    }else{
+      d.setTextColor(TFT_WHITE,TFT_BLACK);d.setTextDatum(0);
+      const body=this.offline[this.sel].body;const words=body.split(' ');
+      let line='',y=55;
+      for(const w of words){
+        if((line+w).length>32){d.drawString(line,15,y,2);y+=16;line='';}
+        line+=w+' ';
+      }
+      if(line)d.drawString(line,15,y,2);
+    }
+    d.drawRoundRect(5,285,230,30,5,TFT_WHITE);
+    d.setTextColor(TFT_WHITE,TFT_BLACK);d.setTextDatum(4);
+    d.drawString('BACK',120,300,2);
+  }
+  handleTouch(x,y){
+    if(this.state===0){
+      if(y>=45&&y<=270){
+        const c=this.scroll+Math.floor((y-45)/30);
+        if(c<this.offline.length){this.sel=c;this.state=1;this.draw();}
+      }else if(y>=285)this.sim.setState(S.LAUNCHER);
+    }else{if(y>=285){this.state=0;this.draw();}}
+  }
+}
+class InstallerScreen{
+  constructor(sim){this.sim=sim;this.path='/';this.sel=0;this.scroll=0;this.dialog='';this.state=0;}
+  list(){
+    if(this.path==='/')return [{name:'/local',type:'dir',path:'/local'},{name:'/sd',type:'dir',path:'/sd'}];
+    return this.sim.vfs.listDirFull(this.path).sort((a,b)=>{
+      if(a.isDir&&!b.isDir)return -1;
+      if(!a.isDir&&b.isDir)return 1;
+      return a.name.localeCompare(b.name);
+    });
+  }
+  draw(){
+    const d=this.sim.disp;
+    d.fillScreen(TFT_BLACK);
+    d.drawRoundRect(3,3,234,314,5,TFT_WHITE);
+    d.fillRoundRect(6,6,228,30,5,TFT_BLACK);
+    d.drawRoundRect(6,6,228,30,5,TFT_GREEN);
+    d.setTextColor(TFT_GREEN,TFT_BLACK);d.setTextDatum(4);
+    d.drawString('Installer  '+this.path,120,21,2);
+    if(this.state===2){
+      d.fillRoundRect(10,80,220,140,6,TFT_DARKGREY);
+      d.setTextColor(TFT_WHITE,TFT_DARKGREY);
+      const lines=this.dialog.split('\n');
+      for(let i=0;i<lines.length;i++)d.drawString(lines[i],120,120+i*20,2);
+      d.fillRoundRect(85,175,70,30,4,TFT_BLUE);
+      d.setTextColor(TFT_WHITE,TFT_BLUE);d.drawString('OK',120,190,2);
+      return;
+    }
+    const items=this.list();
+    d.fillRect(10,45,220,230,TFT_BLACK);
+    if(!items.length){d.setTextColor(TFT_DARKGREY,TFT_BLACK);d.setTextDatum(4);d.drawString('Folder empty',120,160,2);}
+    for(let i=0;i<7;i++){
+      const idx=this.scroll+i;if(idx>=items.length)break;
+      const it=items[idx];const y=45+i*30;
+      let label=it.name,col=TFT_WHITE;
+      if(it.isDir){
+        const jp=it.path+'/app.json';
+        if(this.sim.vfs.exists(jp)){
+          try{const meta=JSON.parse(this.sim.vfs.read(jp));label='[APP] '+(meta.name||it.name);col=TFT_GREEN;}catch(e){}
+        }else label='[D] '+it.name;
+      }
+      if(idx===this.sel){
+        d.fillRect(10,y,220,25,TFT_WHITE);
+        d.setTextColor(TFT_BLACK,TFT_WHITE);d.setTextDatum(3);
+        d.drawString('> '+label,15,y+12,2);
+      }else{
+        d.setTextColor(col,TFT_BLACK);d.setTextDatum(3);
+        d.drawString('  '+label,15,y+12,2);
+      }
+    }
+    d.drawRoundRect(5,285,230,30,5,TFT_WHITE);
+    d.setTextColor(TFT_WHITE,TFT_BLACK);d.setTextDatum(4);
+    d.drawString('ESC',30,300,2);d.drawString('|',60,300,2);
+    d.drawString('UP',90,300,2);d.drawString('|',120,300,2);
+    d.drawString('SEL',150,300,2);d.drawString('|',180,300,2);
+    d.drawString('DN',210,300,2);
+  }
+  handleTouch(x,y){
+    if(this.state===2){if(x>=85&&x<=155&&y>=175&&y<=210){this.state=0;this.draw();}return;}
+    const items=this.list();
+    if(y>=45&&y<=270){
+      const c=this.scroll+Math.floor((y-45)/30);
+      if(c<items.length){
+        this.sel=c;const it=items[c];
+        if(it.isDir&&!this.sim.vfs.exists(it.path+'/app.json')){this.path=it.path;this.sel=0;this.scroll=0;this.draw();}
+        else if(it.isDir)this._installApp(it.path);
+        else if(it.name.endsWith('.js')){
+          const name=it.name.replace('.js','');
+          this.sim.launchApp({name,path:it.path,pkg:name});
+        }
+      }
+      return;
+    }
+    if(y>=285){
+      if(x<60){
+        if(this.path==='/')this.sim.setState(S.LAUNCHER);
+        else{const p=this.path.split('/').filter(Boolean);p.pop();this.path='/'+p.join('/');this.sel=0;this.scroll=0;this.draw();}
+      }else if(x>=60&&x<120){if(this.sel>0){this.sel--;if(this.sel<this.scroll)this.scroll=this.sel;this.draw();}}
+      else if(x>=120&&x<180){
+        if(this.sel<items.length){
+          const it=items[this.sel];
+          if(it.isDir&&this.sim.vfs.exists(it.path+'/app.json'))this._installApp(it.path);
+        }
+      }else{if(this.sel<items.length-1){this.sel++;if(this.sel>=this.scroll+7)this.scroll++;this.draw();}}
+    }
+  }
+  _installApp(srcPath){
+    const meta=JSON.parse(this.sim.vfs.read(srcPath+'/app.json'));
+    const pkg=meta.packageName||'unknown.pkg';
+    const dst='/local/apps/'+pkg;
+    this.sim.vfs.mkdir(dst);
+    this.sim.vfs.write(dst+'/app.json',JSON.stringify(meta,null,2));
+    const code=this.sim.vfs.read(srcPath+'/main.js');
+    this.sim.vfs.write(dst+'/main.js',code);
+    this.dialog=`${meta.name} v${meta.version}\n\nInstalled successfully!`;
+    this.state=2;
+    this.sim.launcher.scan();
+    this.sim.refreshAppList();
+    this.draw();
+  }
+}
+class CalibratorScreen{
+  constructor(sim){this.sim=sim;this.step=0;}
+  draw(){
+    const d=this.sim.disp;
+    d.fillScreen(TFT_BLACK);
+    d.setTextColor(TFT_WHITE,TFT_BLACK);d.setTextDatum(4);
+    d.drawString('Touch Calibration',120,140,2);
+    d.drawString('Tap the red target',120,165,2);
+    const targets=[[20,20],[220,20],[20,300],[220,300],[120,160]];
+    const [tx,ty]=targets[this.step%targets.length];
+    d.fillCircle(tx,ty,10,TFT_RED);
+    d.drawCircle(tx,ty,12,TFT_WHITE);
+  }
+  handleTouch(x,y){
+    this.step++;
+    if(this.step>=5){
+      this.sim.notif.post('Touch','Calibration saved!','ok');
+      setTimeout(()=>this.sim.setState(S.SETTINGS),400);
+    }else this.draw();
+  }
+}
+class WebServerScreen{
+  constructor(sim){this.sim=sim;}
+  draw(){
+    const d=this.sim.disp;
+    d.fillScreen(TFT_BLACK);
+    d.drawRoundRect(3,3,234,314,5,TFT_WHITE);
+    d.fillRoundRect(6,6,228,30,5,TFT_BLACK);
+    d.drawRoundRect(6,6,228,30,5,TFT_CYAN);
+    d.setTextColor(TFT_CYAN,TFT_BLACK);d.setTextDatum(4);
+    d.drawString('Web Server',120,21,2);
+    d.setTextDatum(0);d.setTextColor(TFT_WHITE,TFT_BLACK);
+    const ip=this.sim.sim.wifi?'192.168.1.100':'0.0.0.0';
+    d.drawString('Status:',15,50,2);
+    d.setTextColor(this.sim.sim.wifi?TFT_GREEN:TFT_RED,TFT_BLACK);
+    d.drawString(this.sim.sim.wifi?'RUNNING':'STOPPED',90,50,2);
+    d.setTextColor(TFT_WHITE,TFT_BLACK);
+    d.drawString('IP:',15,75,2);
+    d.setTextColor(TFT_CYAN,TFT_BLACK);
+    d.drawString(ip,50,75,2);
+    d.setTextColor(TFT_WHITE,TFT_BLACK);
+    d.drawString('User: admin',15,110,2);
+    d.drawString('Pass: ********',15,130,2);
+    d.setTextColor(TFT_DARKGREY,TFT_BLACK);
+    d.drawString('(browser-based server not',15,170,2);
+    d.drawString(' available in web emulator)',15,190,2);
+    d.drawRoundRect(5,285,230,30,5,TFT_WHITE);
+    d.setTextColor(TFT_WHITE,TFT_BLACK);d.setTextDatum(4);
+    d.drawString('EXIT',120,300,2);
+  }
+  handleTouch(x,y){if(y>=285)this.sim.setState(S.WEB_APP);}
+}
+class CloudScreen{
+  constructor(sim){this.sim=sim;}
+  draw(){
+    const d=this.sim.disp;
+    d.fillScreen(TFT_BLACK);
+    d.drawRoundRect(3,3,234,314,5,TFT_WHITE);
+    d.fillRoundRect(6,6,228,30,5,TFT_BLACK);
+    d.drawRoundRect(6,6,228,30,5,TFT_GREEN);
+    d.setTextColor(TFT_GREEN,TFT_BLACK);d.setTextDatum(4);
+    d.drawString('KryonCloud',120,21,2);
+    d.setTextDatum(0);d.setTextColor(TFT_YELLOW,TFT_BLACK);
+    d.drawString('Not Paired',15,60,2);
+    d.setTextColor(TFT_WHITE,TFT_BLACK);
+    d.drawString('This device is not linked',15,90,2);
+    d.drawString('to a KryonCloud account.',15,110,2);
+    d.setTextColor(TFT_CYAN,TFT_BLACK);
+    d.drawString('Emulator note:',15,160,2);
+    d.setTextColor(TFT_DARKGREY,TFT_BLACK);
+    d.drawString('Pairing requires a real',15,185,2);
+    d.drawString('device + kryonos.harislab',15,205,2);
+    d.drawString('.tech backend.',15,225,2);
+    d.drawRoundRect(5,285,230,30,5,TFT_WHITE);
+    d.setTextColor(TFT_WHITE,TFT_BLACK);d.setTextDatum(4);
+    d.drawString('BACK',120,300,2);
+  }
+  handleTouch(x,y){if(y>=285)this.sim.setState(S.LAUNCHER);}
+}
+class UpdaterScreen{
+  constructor(sim){this.sim=sim;this.checked=false;this.result=null;}
+  async check(){
+    this.result='checking';this.draw();
+    try{
+      const res=await fetch('https://raw.githubusercontent.com/Haris16-code/KryonOS/refs/heads/main/updates/esp32/v2/update.json');
+      const data=await res.json();
+      const rel=data.release||data;
+      if(rel.version&&rel.version!==KRYONOS_VERSION)this.result='available:'+rel.version;
+      else this.result='uptodate';
+    }catch(e){this.result='failed:'+e.message;}
+    this.draw();
+  }
+  draw(){
+    const d=this.sim.disp;
+    d.fillScreen(TFT_BLACK);
+    d.drawRoundRect(3,3,234,314,5,TFT_WHITE);
+    d.fillRoundRect(6,6,228,30,5,TFT_BLACK);
+    d.drawRoundRect(6,6,228,30,5,TFT_GREEN);
+    d.setTextColor(TFT_GREEN,TFT_BLACK);d.setTextDatum(4);
+    d.drawString('System Updates',120,21,2);
+    if(!this.result){d.setTextColor(TFT_YELLOW,TFT_BLACK);d.drawString('Checking for updates...',120,160,2);}
+    else if(this.result==='checking'){d.setTextColor(TFT_YELLOW,TFT_BLACK);d.drawString('Contacting server...',120,160,2);}
+    else if(this.result==='uptodate'){
+      d.setTextColor(TFT_GREEN,TFT_BLACK);
+      d.drawString('System is up to date!',120,120,2);
+      d.setTextColor(TFT_CYAN,TFT_BLACK);
+      d.drawString('Current: v'+KRYONOS_VERSION,120,145,2);
+    }else if(this.result.startsWith('available:')){
+      d.setTextColor(TFT_YELLOW,TFT_BLACK);
+      d.drawString('Update available',120,110,2);
+      d.setTextColor(TFT_WHITE,TFT_BLACK);
+      d.drawString('New: '+this.result.split(':')[1],120,135,2);
+      d.setTextColor(TFT_DARKGREY,TFT_BLACK);
+      d.drawString('OTA not supported in browser',120,165,2);
+    }else{
+      d.setTextColor(TFT_RED,TFT_BLACK);
+      d.drawString('Check failed',120,140,2);
+      d.setTextColor(TFT_WHITE,TFT_BLACK);
+      d.drawString(this.result.replace('failed:','').substring(0,30),120,165,2);
+    }
+    d.drawRoundRect(5,285,230,30,5,TFT_WHITE);
+    d.setTextColor(TFT_WHITE,TFT_BLACK);
+    d.drawString('BACK',120,300,2);
+  }
+  handleTouch(x,y){if(!this.result){this.check();return;}if(y>=285)this.sim.setState(S.SETTINGS);}
+}
+class WiFiScreen{
+  constructor(sim){this.sim=sim;}
+  draw(){
+    const d=this.sim.disp;
+    d.fillScreen(TFT_BLACK);
+    d.drawRoundRect(3,3,234,314,5,TFT_WHITE);
+    d.fillRoundRect(6,6,228,30,5,TFT_BLACK);
+    d.drawRoundRect(6,6,228,30,5,TFT_GREEN);
+    d.setTextColor(TFT_GREEN,TFT_BLACK);d.setTextDatum(4);
+    d.drawString('WiFi Options',120,21,2);
+    d.setTextDatum(0);
+    const on=this.sim.sim.wifi;
+    d.fillRoundRect(10,40,220,78,6,0x10A2);
+    d.drawRoundRect(10,40,220,78,6,TFT_CYAN);
+    d.setTextColor(on?TFT_GREEN:TFT_RED,0x10A2);
+    d.drawString(on?'Status: ONLINE':'Status: DISABLED',18,48,2);
+    d.setTextColor(TFT_WHITE,0x10A2);
+    d.drawString('SSID: '+(on?'KryonOS_Sim':'(off)'),18,68,2);
+    d.drawString('IP:   '+(on?'192.168.1.100':'0.0.0.0'),18,88,2);
+    d.setTextDatum(4);
+    d.fillRoundRect(12,130,216,34,5,on?TFT_BLUE:TFT_DARKGREY);
+    d.setTextColor(TFT_WHITE,on?TFT_BLUE:TFT_DARKGREY);
+    d.drawString(on?'WiFi: ON (Tap to Disable)':'WiFi: OFF (Tap to Enable)',120,147,2);
+    if(on){
+      d.fillRoundRect(12,172,216,34,5,TFT_PURPLE);
+      d.setTextColor(TFT_WHITE,TFT_PURPLE);
+      d.drawString('Scan Nearby Networks',120,189,2);
+      d.fillRoundRect(12,214,216,34,5,0x03E0);
+      d.setTextColor(TFT_WHITE,0x03E0);
+      d.drawString('Saved Networks',120,231,2);
+      d.fillRoundRect(12,256,216,34,5,TFT_ORANGE);
+      d.setTextColor(TFT_WHITE,TFT_ORANGE);
+      d.drawString('Web Server',120,273,2);
+    }
+    d.drawRoundRect(5,285,230,30,5,TFT_WHITE);
+    d.setTextColor(TFT_WHITE,TFT_BLACK);d.setTextDatum(4);
+    d.drawString('BACK',120,300,2);
+  }
+  handleTouch(x,y){
+    if(x>=12&&x<=228&&y>=130&&y<=164){this.sim.sim.wifi=!this.sim.sim.wifi;this.sim.updateStatus();this.draw();return;}
+    if(this.sim.sim.wifi){
+      if(y>=172&&y<=206)this.sim.notif.post('WiFi','Scanning 2.4GHz...','info');
+      else if(y>=214&&y<=248)this.sim.notif.post('WiFi','Saved: KryonOS_Sim','ok');
+      else if(y>=256&&y<=290)this.sim.setState(S.WEB_APP);
+    }
+    if(y>=285)this.sim.setState(S.SETTINGS);
+  }
+}
+class AppsScreen{
+  constructor(sim){this.sim=sim;this.sel=-1;this.scroll=0;}
+  list(){return this.sim.vfs.listDirFull('/local/apps');}
+  draw(){
+    const d=this.sim.disp;
+    d.fillScreen(TFT_BLACK);
+    d.drawRoundRect(3,3,234,314,5,TFT_WHITE);
+    d.fillRoundRect(6,6,228,30,5,TFT_BLACK);
+    d.drawRoundRect(6,6,228,30,5,TFT_GREEN);
+    d.setTextColor(TFT_GREEN,TFT_BLACK);d.setTextDatum(4);
+    d.drawString('Manage Apps',120,21,2);
+    const items=this.list();
+    d.fillRect(10,45,220,230,TFT_BLACK);
+    if(!items.length){d.setTextColor(TFT_DARKGREY,TFT_BLACK);d.drawString('No apps installed',120,160,2);}
+    for(let i=0;i<7;i++){
+      const idx=this.scroll+i;if(idx>=items.length)break;
+      const it=items[idx];const y=45+i*30;
+      let label=it.name;
+      try{const meta=JSON.parse(this.sim.vfs.read(it.path+'/app.json'));label=meta.name||it.name;}catch(e){}
+      if(idx===this.sel){
+        d.fillRect(10,y,220,25,TFT_WHITE);
+        d.setTextColor(TFT_BLACK,TFT_WHITE);d.setTextDatum(3);
+        d.drawString('> '+label,15,y+12,2);
+      }else{
+        d.setTextColor(TFT_WHITE,TFT_BLACK);d.setTextDatum(3);
+        d.drawString('  '+label,15,y+12,2);
+      }
+    }
+    if(this.sel>=0&&this.sel<items.length){
+      d.fillRoundRect(20,240,200,50,5,TFT_DARKGREY);
+      d.setTextColor(TFT_YELLOW,TFT_DARKGREY);d.setTextDatum(4);
+      d.drawString('Manage: '+items[this.sel].name,120,252,2);
+      d.fillRoundRect(30,265,80,20,3,TFT_RED);
+      d.setTextColor(TFT_WHITE,TFT_RED);
+      d.drawString('Uninstall',70,275,2);
+      d.fillRoundRect(130,265,80,20,3,TFT_BLUE);
+      d.setTextColor(TFT_WHITE,TFT_BLUE);
+      d.drawString('Cancel',170,275,2);
+    }
+    d.drawRoundRect(5,285,230,30,5,TFT_WHITE);
+    d.setTextColor(TFT_WHITE,TFT_BLACK);
+    d.drawString('BACK',120,300,2);
+  }
+  handleTouch(x,y){
+    const items=this.list();
+    if(this.sel>=0&&y>=240&&y<=290){
+      if(x>=30&&x<=110){
+        this.sim.vfs.remove(items[this.sel].path);
+        this.sel=-1;this.sim.launcher.scan();this.sim.refreshAppList();this.draw();
+      }else if(x>=130&&x<=210){this.sel=-1;this.draw();}
+      return;
+    }
+    if(y>=45&&y<=270){
+      const c=this.scroll+Math.floor((y-45)/30);
+      if(c<items.length){this.sel=c;this.draw();}
+    }else if(y>=285)this.sim.setState(S.SETTINGS);
+  }
+}
+class PermissionsScreen{
+  constructor(sim){this.sim=sim;this.scroll=0;this.sel=-1;}
+  list(){return [...this.sim.permissions].filter(g=>g.endsWith(':storage')).map(g=>({pkg:g.replace(':storage','')}));}
+  draw(){
+    const d=this.sim.disp;
+    d.fillScreen(TFT_BLACK);
+    d.drawRoundRect(3,3,234,314,5,TFT_WHITE);
+    d.fillRoundRect(6,6,228,30,5,TFT_BLACK);
+    d.drawRoundRect(6,6,228,30,5,TFT_GREEN);
+    d.setTextColor(TFT_GREEN,TFT_BLACK);d.setTextDatum(4);
+    d.drawString('Permissions',120,21,2);
+    const items=this.list();
+    d.fillRect(10,45,220,230,TFT_BLACK);
+    if(!items.length){d.setTextColor(TFT_DARKGREY,TFT_BLACK);d.drawString('No granted permissions',120,160,2);}
+    for(let i=0;i<7;i++){
+      const idx=this.scroll+i;if(idx>=items.length)break;
+      const y=45+i*30;
+      if(idx===this.sel){
+        d.fillRect(10,y,220,25,TFT_WHITE);
+        d.setTextColor(TFT_BLACK,TFT_WHITE);d.setTextDatum(3);
+        d.drawString('> '+items[idx].pkg+' [storage]',15,y+12,2);
+      }else{
+        d.setTextColor(TFT_WHITE,TFT_BLACK);d.setTextDatum(3);
+        d.drawString('  '+items[idx].pkg+' [storage]',15,y+12,2);
+      }
+    }
+    d.drawRoundRect(5,285,230,30,5,TFT_WHITE);
+    d.setTextColor(TFT_WHITE,TFT_BLACK);
+    d.drawString('BACK',120,300,2);
+  }
+  handleTouch(x,y){
+    const items=this.list();
+    if(y>=45&&y<=270){
+      const c=this.scroll+Math.floor((y-45)/30);
+      if(c<items.length){
+        this.sim.permissions.delete(items[c].pkg+':storage');
+        this.sim.notif.post('Permissions','Revoked for '+items[c].pkg,'warn');
+        this.draw();
+      }
+    }else if(y>=285)this.sim.setState(S.SETTINGS);
+  }
+}
+class TimeScreen{
+  constructor(sim){this.sim=sim;}
+  draw(){
+    const d=this.sim.disp;
+    d.fillScreen(TFT_BLACK);
+    d.drawRoundRect(3,3,234,314,5,TFT_WHITE);
+    d.fillRoundRect(6,6,228,30,5,TFT_BLACK);
+    d.drawRoundRect(6,6,228,30,5,TFT_CYAN);
+    d.setTextColor(TFT_CYAN,TFT_BLACK);d.setTextDatum(4);
+    d.drawString('Time & Region',120,21,2);
+    d.setTextColor(TFT_GREEN,TFT_BLACK);
+    d.drawString(new Date().toLocaleTimeString('en-GB',{hour12:!this.sim.sim.use24h}),120,75,4);
+    d.fillRoundRect(20,110,200,35,5,TFT_DARKGREY);
+    d.setTextColor(TFT_GREEN,TFT_DARKGREY);
+    d.drawString('NTP Sync: ON (host time)',120,127,2);
+    d.fillRoundRect(20,155,200,35,5,TFT_BLUE);
+    d.setTextColor(TFT_WHITE,TFT_BLUE);
+    d.drawString('Region: '+this.sim.sim.timezone,120,172,2);
+    d.fillRoundRect(20,200,200,35,5,TFT_ORANGE);
+    d.setTextColor(TFT_WHITE,TFT_ORANGE);
+    d.drawString(this.sim.sim.use24h?'Format: 24h':'Format: 12h',120,217,2);
+    d.drawRoundRect(5,285,230,30,5,TFT_WHITE);
+    d.setTextColor(TFT_WHITE,TFT_BLACK);d.setTextDatum(4);
+    d.drawString('BACK',120,300,2);
+  }
+  handleTouch(x,y){
+    if(y>=200&&y<=235){this.sim.sim.use24h=!this.sim.sim.use24h;this.sim.updateStatus();this.draw();}
+    else if(y>=285)this.sim.setState(S.SETTINGS);
+  }
+}
 
-/* =========================================================
-   12. MAIN SIMULATOR APPLICATION CONTROLLER
-   ========================================================= */
-class Simulator {
+/* ─── 13. SIMULATOR ───────────────────────────────────────────── */
+class Simulator{
   constructor(){
-    this.canvas = document.getElementById('screen');
-    this.disp = new TFTDisplay(this.canvas);
-    this.vfs = new IndexedDB_VFS(this);
-    this.keyboard = new OnScreenKeyboard(this);
-    this.notif = new NotificationOverlay(this);
-    this.touch = { x: 0, y: 0, touched: false, justPressed: false };
-    this.exitRequested = false;
-
-    this.env = buildRuntimeAPIs(this);
-    this.state = STATE_LAUNCHER;
-
-    // Attach all screens
-    this.screens = {
-      [STATE_LAUNCHER]: new LauncherUI(this),
-      [STATE_APP_STORE]: new AppStoreUI(this),
-      [STATE_INSTALLER]: new HelpCenterUI(this),
-      [STATE_SETTINGS]: new SettingsUI(this),
-      [STATE_SETTINGS_WIFI]: new WiFiSettingsUI(this),
-      [STATE_SETTINGS_ABOUT]: new AboutDeviceUI(this),
-      [STATE_SETTINGS_APPS]: new AboutDeviceUI(this),
-      [STATE_SETTINGS_PERMISSIONS]: new AboutDeviceUI(this),
-      [STATE_SETTINGS_TIME]: new WiFiSettingsUI(this),
-      [STATE_UPDATER_MANUAL]: new SystemUpdaterUI(this),
-      [STATE_HELP_CENTER]: new HelpCenterUI(this),
-      [STATE_CALIBRATOR]: new TouchCalibratorUI(this),
-      [STATE_WEB_APP]: new WiFiSettingsUI(this)
+    this.canvas=$('screen');
+    this.overlayCanvas=$('overlay');
+    this.overlayCtx=this.overlayCanvas.getContext('2d');
+    this.disp=new TFTDisplay(this.canvas);
+    this.vfs=new VFS(this);
+    this.keyboard=new OnScreenKeyboard(this);
+    this.notif=new NotificationOverlay(this);
+    this.touch={x:0,y:0,touched:false,justPressed:false};
+    this.exitRequested=false;
+    this.startTime=Date.now();
+    this.permissions=new Set();
+    this.currentPkg='';
+    this.pendingLaunch=null;
+    this.sim={
+      board:BOARDS['esp32-s3-devkitc-1-n16r8'],
+      wifi:true,timezone:'UTC0',use24h:true,weather:'online'
     };
-    this.launcher = this.screens[STATE_LAUNCHER];
+    this.kryon3D=new Kryon3DEngine();
 
+    this.env={};
+    this.env.FastMath=buildFastMath();
+    this.env.Crypto=buildCrypto();
+    this.env.PWM=buildPWM();
+    this.env.I2C=buildI2C();
+    this.env.Network=buildNetwork(this);
+    this.env.HttpServer=buildHttpServer();
+    this.env.WebSocket=buildWebSocketClass(this);
+    this.env.IPC=buildIPC(this);
+    this.env.AI=buildAI();
+    this.env.FS=buildFS(this);
+    this.env.System=buildSystem(this,this.disp,this.keyboard,this.notif,
+      this.env.PWM,this.env.I2C,this.env.Crypto,this.env.IPC,this.env.AI,
+      this.env.Network,this.env.HttpServer,this.kryon3D);
+
+    this.launcher=new LauncherScreen(this);
+    this.screens={
+      [S.LAUNCHER]:this.launcher,
+      [S.SETTINGS]:new SettingsScreen(this),
+      [S.SETTINGS_WIFI]:new WiFiScreen(this),
+      [S.SETTINGS_ABOUT]:new AboutScreen(this),
+      [S.SETTINGS_APPS]:new AppsScreen(this),
+      [S.SETTINGS_PERMISSIONS]:new PermissionsScreen(this),
+      [S.SETTINGS_TIME]:new TimeScreen(this),
+      [S.UPDATER_MANUAL]:new UpdaterScreen(this),
+      [S.UPDATER_BOOT]:new UpdaterScreen(this),
+      [S.APP_STORE]:new AppStoreScreen(this),
+      [S.HELP_CENTER]:new HelpScreen(this),
+      [S.INSTALLER]:new InstallerScreen(this),
+      [S.CALIBRATOR]:new CalibratorScreen(this),
+      [S.WEB_APP]:new WebServerScreen(this),
+      [S.KRYON_CLOUD]:new CloudScreen(this)
+    };
+    this.state=S.LAUNCHER;
     this._bindInput();
     this._bindUI();
 
-    this.vfs.init().then(() => {
-      this.launcher.scanApps();
-      this.setState(STATE_LAUNCHER);
+    this.vfs.init().then(()=>{
+      this.launcher.scan();
+      this.refreshAppList();
+      this.setState(S.LAUNCHER);
     });
 
-    // 60 FPS Engine Frame Loop
-    let frames = 0, lastT = performance.now();
-    const countFrame = () => {
-      frames++;
-      this.notif.updateAndRender();
-      requestAnimationFrame(countFrame);
-    };
-    requestAnimationFrame(countFrame);
-    setInterval(() => {
-      const now = performance.now();
-      const fpsEl = document.getElementById('fps-label');
-      if (fpsEl) fpsEl.textContent = Math.round(frames * 1000 / (now - lastT)) + ' fps';
-      frames = 0; lastT = now;
-    }, 1000);
-  }
+    const loop=()=>{this.notif.render();requestAnimationFrame(loop);};
+    requestAnimationFrame(loop);
 
-  onStorageChanged(){
-    this.launcher.scanApps();
-    if (this.state === STATE_LAUNCHER) this.launcher.draw();
+    let frames=0,last=performance.now();
+    setInterval(()=>{
+      const now=performance.now();
+      $('st-fps').textContent=Math.round(frames*1000/(now-last));
+      frames=0;last=now;
+    },1000);
+    const cf=()=>{frames++;requestAnimationFrame(cf);};
+    requestAnimationFrame(cf);
   }
-
+  onStorageChanged(){}
   setState(s){
-    this.state = s;
-    const labels = {
-      [STATE_LAUNCHER]: 'LAUNCHER', [STATE_SETTINGS]: 'SETTINGS',
-      [STATE_RUN_APP]: 'RUN_APP', [STATE_APP_STORE]: 'APP_STORE',
-      [STATE_SETTINGS_WIFI]: 'WIFI_CONFIG', [STATE_SETTINGS_ABOUT]: 'ABOUT'
+    this.state=s;
+    const labels={
+      [S.LAUNCHER]:'LAUNCHER',[S.SETTINGS]:'SETTINGS',
+      [S.RUN_APP]:'RUN_APP',[S.APP_STORE]:'APP_STORE',
+      [S.SETTINGS_WIFI]:'WIFI',[S.SETTINGS_ABOUT]:'ABOUT',
+      [S.HELP_CENTER]:'HELP',[S.INSTALLER]:'INSTALLER',[S.KRYON_CLOUD]:'CLOUD'
     };
-    const stEl = document.getElementById('state-label');
-    if (stEl) stEl.textContent = labels[s] || ('STATE_' + s);
-
-    // Bezel hardware exit button toggle
-    const exitBtn = document.getElementById('hw-exit-btn');
-    if (exitBtn) {
-      if (s === STATE_RUN_APP) exitBtn.classList.add('active');
-      else exitBtn.classList.remove('active');
-    }
-
-    if (s === STATE_RUN_APP) return;
+    $('st-state').textContent=labels[s]||('STATE_'+s);
+    const eb=$('hw-exit-btn');
+    if(s===S.RUN_APP)eb.classList.add('active');
+    else eb.classList.remove('active');
+    if(s===S.RUN_APP)return;
     this.disp.fillScreen(TFT_BLACK);
-    const scr = this.screens[s];
-    if (scr) scr.draw();
+    const scr=this.screens[s];
+    if(scr&&scr.draw)scr.draw();
   }
-
   _bindInput(){
-    const cvs = this.canvas;
-    const getXY = (cx, cy) => {
-      const r = cvs.getBoundingClientRect();
-      const x = Math.floor((cx - r.left) * cvs.width / r.width);
-      const y = Math.floor((cy - r.top) * cvs.height / r.height);
-      return { x: Math.max(0, Math.min(cvs.width - 1, x)), y: Math.max(0, Math.min(cvs.height - 1, y)) };
+    const cvs=this.canvas;
+    const getXY=(cx,cy)=>{
+      const r=cvs.getBoundingClientRect();
+      return {
+        x:clamp(Math.floor((cx-r.left)*cvs.width/r.width),0,cvs.width-1),
+        y:clamp(Math.floor((cy-r.top)*cvs.height/r.height),0,cvs.height-1)
+      };
     };
-
-    cvs.addEventListener('mousedown', e => {
-      e.preventDefault();
-      const p = getXY(e.clientX, e.clientY);
-      this._handlePress(p.x, p.y);
+    const press=(cx,cy)=>{const p=getXY(cx,cy);this._handlePress(p.x,p.y);};
+    cvs.addEventListener('mousedown',e=>{e.preventDefault();press(e.clientX,e.clientY);});
+    window.addEventListener('mouseup',()=>{if(this.state===S.RUN_APP)this.touch.touched=false;});
+    cvs.addEventListener('touchstart',e=>{e.preventDefault();const t=e.changedTouches[0];press(t.clientX,t.clientY);},{passive:false});
+    cvs.addEventListener('touchend',e=>{e.preventDefault();if(this.state===S.RUN_APP)this.touch.touched=false;},{passive:false});
+    $('hw-exit-btn').addEventListener('click',()=>{
+      this.exitRequested=true;
+      if(this.keyboard.active)this.keyboard._finish('');
     });
-    window.addEventListener('mouseup', () => {
-      if (this.state === STATE_RUN_APP) this.touch.touched = false;
-    });
-
-    cvs.addEventListener('touchstart', e => {
-      e.preventDefault();
-      const t = e.changedTouches[0];
-      const p = getXY(t.clientX, t.clientY);
-      this._handlePress(p.x, p.y);
-    }, {passive:false});
-    cvs.addEventListener('touchend', e => {
-      e.preventDefault();
-      if (this.state === STATE_RUN_APP) this.touch.touched = false;
-    }, {passive:false});
-
-    // Hardware exit button in bezel
-    document.getElementById('hw-exit-btn').addEventListener('click', () => {
-      this.exitRequested = true;
-    });
-
-    document.querySelectorAll('.ctrl-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const scr = this.screens[this.state];
-        if (scr && scr.handleTouch) {
-          const k = btn.dataset.key;
-          if (k === 'up') scr.handleTouch(30, 300);
-          else if (k === 'sel') scr.handleTouch(120, 300);
-          else if (k === 'dn') scr.handleTouch(210, 300);
+    document.querySelectorAll('.ctrl-btn').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const scr=this.screens[this.state];
+        if(scr&&scr.handleTouch){
+          const k=btn.dataset.key;
+          const y=this.disp.H-20;
+          if(k==='up')scr.handleTouch(30,y);
+          else if(k==='sel')scr.handleTouch(120,y);
+          else if(k==='dn')scr.handleTouch(210,y);
         }
       });
     });
   }
-
-  _handlePress(x, y){
-    if (this.state === STATE_RUN_APP && x >= 200 && y <= 40){
-      this.exitRequested = true;
+  _handlePress(x,y){
+    if(this.state===S.RUN_APP&&x>=200&&y<=40){this.exitRequested=true;return;}
+    if(this.keyboard.active){this.keyboard.handleTouch(x,y);return;}
+    if(this.state===S.RUN_APP){
+      this.touch.x=x;this.touch.y=y;
+      this.touch.touched=true;this.touch.justPressed=true;
       return;
     }
-    if (this.keyboard.active){
-      this.keyboard.handleTouch(x, y);
-      return;
-    }
-    if (this.state === STATE_RUN_APP){
-      this.touch.x = x; this.touch.y = y;
-      this.touch.touched = true;
-      this.touch.justPressed = true;
-      return;
-    }
-    const scr = this.screens[this.state];
-    if (scr && scr.handleTouch) {
-      scr.handleTouch(x, y);
-    }
+    const scr=this.screens[this.state];
+    if(scr&&scr.handleTouch)scr.handleTouch(x,y);
   }
-
-  async launchApp(app, codeOverride){
-    let rawCode = (codeOverride != null) ? codeOverride : this.vfs.readTextFile(app.isFolder ? app.path + '/main.js' : app.path);
-    if (!rawCode){ log('Error: main.js not found in storage', 'err'); return; }
-
-    this.exitRequested = false;
-    this.touch = { x: 0, y: 0, touched: false, justPressed: false };
-    this.setState(STATE_RUN_APP);
-
+  render3D(x=0,y=0){if(this.kryon3D.sprite)this.disp.ctx.drawImage(this.kryon3D.sprite.canvas,x,y);}
+  async launchApp(app,codeOverride){
+    let rawCode=codeOverride!=null?codeOverride:this.vfs.read(app.isLegacy?app.path:app.path+'/main.js');
+    if(!rawCode){log('App main.js not found at '+app.path,'err');return;}
+    this.exitRequested=false;
+    this.touch={x:0,y:0,touched:false,justPressed:false};
+    this.currentPkg=app.pkg||app.name;
+    const appDir=app.path.endsWith('/')?app.path:app.path+'/';
+    this.env.FS._setSandboxRoot(appDir);
+    this.env.IPC._setCurrentAppId(this.currentPkg);
+    this.env.IPC._setLaunchArgs('');
+    this.setState(S.RUN_APP);
     this.disp.fillScreen(TFT_BLACK);
 
-    const transformedCode = universalAsyncTransform(rawCode);
+    let transformed;
+    try{transformed=transpile(rawCode);}
+    catch(err){await this._showError(err.message);return;}
 
-    const scopeKeys = [
-      'System', 'FastMath', 'FS', 'PWM', 'Network', 'console', 'print', 'println',
-      'BLACK', 'WHITE', 'RED', 'GREEN', 'BLUE', 'YELLOW', 'CYAN', 'MAGENTA', 'ORANGE', 'DARKGREY', 'LIGHTGREY', 'PURPLE', 'NAVY',
-      'C_BLACK', 'C_WHITE', 'C_RED', 'C_GREEN', 'C_BLUE', 'C_YELLOW', 'C_CYAN', 'C_MAGENTA', 'C_ORANGE', 'C_DARKGREY', 'C_PURPLE', 'C_NAVY'
+    const scopeKeys=[
+      'System','FS','Network','HttpServer','WebSocket','Notification',
+      'IPC','Kryon','AI','PWM','I2C','Crypto','Kryon3D','FastMath',
+      'console','print','println',
+      'BLACK','WHITE','RED','GREEN','BLUE','YELLOW','CYAN','MAGENTA','ORANGE','DARKGREY','LIGHTGREY','PURPLE','NAVY',
+      'C_BLACK','C_WHITE','C_RED','C_GREEN','C_BLUE','C_YELLOW','C_CYAN','C_MAGENTA','C_ORANGE','C_DARKGREY','C_PURPLE','C_NAVY'
     ];
-
-    const scopeVals = [
-      this.env.System, this.env.FastMath, this.env.FS, this.env.PWM, this.env.Network,
-      { log: (...a)=>log(a.join(' ')), warn: (...a)=>log(a.join(' '), 'warn'), error: (...a)=>log(a.join(' '), 'err'), info: (...a)=>log(a.join(' '), 'info') },
-      (...a)=>log(a.join(' ')), (...a)=>log(a.join(' ')),
-      TFT_BLACK, TFT_WHITE, TFT_RED, TFT_GREEN, TFT_BLUE, TFT_YELLOW, TFT_CYAN, TFT_MAGENTA, TFT_ORANGE, TFT_DARKGREY, TFT_LIGHTGREY, TFT_PURPLE, TFT_NAVY,
-      C_BLACK, C_WHITE, C_RED, C_GREEN, C_BLUE, C_YELLOW, C_CYAN, C_MAGENTA, C_ORANGE, C_DARKGREY, C_PURPLE, C_NAVY
+    const scopeVals=[
+      this.env.System,this.env.FS,this.env.Network,this.env.HttpServer,
+      this.env.WebSocket,this.notif,this.env.IPC,
+      {ai:this.env.AI},this.env.AI,this.env.PWM,this.env.I2C,this.env.Crypto,
+      this.kryon3D,this.env.FastMath,
+      {log:(...a)=>log(a.join(' '),'info'),error:(...a)=>log(a.join(' '),'err'),warn:(...a)=>log(a.join(' '),'warn'),info:(...a)=>log(a.join(' '),'info'),debug:(...a)=>log(a.join(' '),'dim')},
+      (...a)=>log(a.join(' ')),(...a)=>log(a.join(' ')),
+      TFT_BLACK,TFT_WHITE,TFT_RED,TFT_GREEN,TFT_BLUE,TFT_YELLOW,TFT_CYAN,TFT_MAGENTA,TFT_ORANGE,TFT_DARKGREY,TFT_LIGHTGREY,TFT_PURPLE,TFT_NAVY,
+      TFT_BLACK,TFT_WHITE,TFT_RED,TFT_GREEN,TFT_BLUE,TFT_YELLOW,TFT_CYAN,TFT_MAGENTA,TFT_ORANGE,TFT_DARKGREY,TFT_PURPLE,TFT_NAVY
     ];
 
     let fn;
-    try {
-      fn = new Function(...scopeKeys, `"use strict"; return (async () => { ${transformedCode} })();`);
-    } catch(err) {
-      await this._showError(err.message);
+    try{fn=new Function(...scopeKeys,`"use strict"; return (async () => { ${transformed} })();`);}
+    catch(err){await this._showError('Compile error: '+err.message);return;}
+
+    log('▶ Running: '+app.name,'info');
+    try{
+      await fn(...scopeVals);
+      log('■ App finished normally');
+    }catch(e){
+      audioHW.reset();
+      if(e.message==='OS_EXIT'||e.code==='OS_EXIT')log('■ Exited via OS_EXIT');
+      else{log('✖ Exception: '+e.message,'err');await this._showError(e.message);return;}
+    }
+    this.env.FS._setSandboxRoot('');
+    this.env.IPC._clear();
+    this.kryon3D.end();
+    if(this.pendingLaunch){
+      const p=this.pendingLaunch;this.pendingLaunch=null;
+      const app={name:'chained',path:p.path,pkg:'chained'};
+      this.env.IPC._setLaunchArgs(p.args);
+      await this.launchApp(app);
       return;
     }
-
-    log('▶ Running: ' + app.name, 'info');
-    try {
-      await fn(...scopeVals);
-      log('■ App finished.');
-    } catch(e) {
-      audioHardware.reset();
-      if (e.message === 'OS_EXIT' || e.code === 'OS_EXIT'){
-        log('■ Exited via [✕ EXIT]');
-      } else {
-        log('✖ App Exception: ' + e.message, 'err');
-        await this._showError(e.message);
-        return;
-      }
-    }
-
-    this.exitRequested = false;
-    this.setState(STATE_LAUNCHER);
+    this.exitRequested=false;
+    this.setState(S.LAUNCHER);
   }
-
   _showError(msg){
-    this.state = STATE_RUN_APP;
-    const stEl = document.getElementById('state-label');
-    if (stEl) stEl.textContent = 'ERROR';
+    this.state=S.RUN_APP;
+    $('st-state').textContent='ERROR';
     this.disp.fillScreen(TFT_RED);
-    this.disp.setTextColor(TFT_WHITE, TFT_RED);
-    this.disp.setTextDatum(TL_DATUM);
-    this.disp.drawString('JS EXCEPTION!', 10, 10, 4);
-
-    const lines = String(msg).split('\n');
-    let y = 60;
-    for (let i = 0; i < lines.length && i < 8; i++){
-      this.disp.drawString(lines[i].substring(0, 38), 10, y, 2);
-      y += 20;
+    this.disp.setTextColor(TFT_WHITE,TFT_RED);
+    this.disp.setTextDatum(0);
+    this.disp.drawString('JS EXCEPTION!',10,10,4);
+    const lines=String(msg).split('\n');
+    let y=60;
+    for(let i=0;i<lines.length&&i<8;i++){
+      this.disp.drawString(lines[i].substring(0,38),10,y,2);
+      y+=20;
     }
-
-    return new Promise(res => {
-      const check = setInterval(() => {
-        if (this.exitRequested){ clearInterval(check); res(); }
-      }, 40);
-    }).then(() => this.setState(STATE_LAUNCHER));
+    return new Promise(res=>{
+      const check=setInterval(()=>{if(this.exitRequested){clearInterval(check);res();}},40);
+    }).then(()=>{this.exitRequested=false;this.setState(S.LAUNCHER);});
   }
-
+  reboot(){this.disp.fillScreen(TFT_BLACK);this.notif.clearAll();this.setState(S.LAUNCHER);}
+  updateStatus(){
+    $('st-wifi').textContent=this.sim.wifi?'ONLINE':'OFF';
+    $('st-wifi').style.color=this.sim.wifi?'var(--accent)':'var(--err)';
+    $('st-heap').textContent=(this.sim.wifi?384:448)+' KB';
+  }
+  refreshAppList(){
+    const el=$('app-list');el.innerHTML='';this.launcher.scan();
+    for(const app of this.launcher.apps){
+      const row=document.createElement('div');row.className='app-row';
+      const left=document.createElement('div');
+      left.innerHTML=`<strong>${app.name}</strong><br><span class="meta">${app.pkg}</span>`;
+      const right=document.createElement('div');right.className='actions';
+      const b1=document.createElement('button');b1.className='btn sec';b1.textContent='▶ Run';
+      b1.onclick=()=>this.launchApp(app);
+      const b2=document.createElement('button');b2.className='btn danger';b2.textContent='✕';
+      b2.onclick=()=>{if(!confirm('Delete '+app.name+'?'))return;this.vfs.remove(app.path);this.refreshAppList();this.launcher.scan();};
+      right.appendChild(b1);right.appendChild(b2);
+      row.appendChild(left);row.appendChild(right);
+      el.appendChild(row);
+    }
+    if(!this.launcher.apps.length)el.innerHTML='<div class="empty">No apps installed. Use Studio tab or App Store.</div>';
+  }
   _bindUI(){
-    document.getElementById('app-code').value = `// Clean Touch Counter App Demo
-var bg = System.color(18, 18, 28);
+    document.querySelectorAll('.tab').forEach(t=>{
+      t.onclick=()=>{
+        document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach(x=>x.classList.remove('active'));
+        t.classList.add('active');
+        document.querySelector(`.tab-pane[data-pane="${t.dataset.tab}"]`).classList.add('active');
+      };
+    });
+    $('btn-refresh-apps').onclick=()=>this.refreshAppList();
+    $('btn-seed-demo').onclick=async()=>{await this.vfs.seedDefaults();this.refreshAppList();this.launcher.scan();this.notif.post('Storage','Demo apps installed','ok');};
+    $('app-code').value=`// Touch Counter — KryonOS demo pattern
+var bg = System.color(18,18,28);
 System.fillScreen(bg);
-
 var count = 0;
 
 function drawUI() {
   System.fillScreen(bg);
   System.setTextColor(WHITE, bg);
   System.drawString("Touch Counter", 35, 30, 4);
-  
   System.setTextColor(CYAN, bg);
   System.drawString("Count: " + count, 75, 110, 4);
-  
-  // Interactive Button
   System.fillRoundRect(30, 200, 180, 50, 8, GREEN);
   System.setTextColor(BLACK, GREEN);
   System.drawString("TAP TO COUNT", 45, 215, 2);
@@ -2105,45 +2267,72 @@ while (true) {
   if (t.touched) {
     if (t.y >= 200 && t.y <= 250 && t.x >= 30 && t.x <= 210) {
       count++;
-      PWM.setTone(18, 1200 + (count * 40), 60);
+      PWM.setTone(18, 1200 + count * 40, 60);
       drawUI();
     }
   }
   System.delay(40);
 }`;
-
-    document.getElementById('btn-install').addEventListener('click', () => {
-      const name = document.getElementById('app-name').value.trim() || 'My App';
-      let pkg = document.getElementById('app-pkg').value.trim() || 'com.app.test';
-      const code = document.getElementById('app-code').value;
-      const dir = '/local/apps/' + pkg;
+    $('btn-install').onclick=()=>{
+      const name=$('app-name').value.trim()||'My App';
+      const pkg=$('app-pkg').value.trim()||'com.app.test';
+      const code=$('app-code').value;
+      const dir='/local/apps/'+pkg;
       this.vfs.mkdir(dir);
-      this.vfs.writeTextFile(dir + '/app.json', JSON.stringify({
-        name, packageName: pkg, version: '1.0.0', api: 2, author: 'Developer', type: 'App', category: 'Utility'
-      }, null, 2));
-      this.vfs.writeTextFile(dir + '/main.js', code);
-      log('💾 Installed to Virtual VFS: ' + name, 'ok');
-      this.launcher.scanApps();
-      this.setState(STATE_LAUNCHER);
-    });
-
-    document.getElementById('btn-run').addEventListener('click', () => {
-      const name = document.getElementById('app-name').value.trim() || 'Live Test';
-      const code = document.getElementById('app-code').value;
-      this.launchApp({ name, path: '__tmp__', isFolder: true }, code);
-    });
-
-    document.getElementById('btn-reset').addEventListener('click', async () => {
-      if (!confirm('Format storage and reload OS?')) return;
-      await this.vfs.reset();
-      this.setState(STATE_LAUNCHER);
-    });
+      this.vfs.write(dir+'/app.json',JSON.stringify({name,packageName:pkg,version:'1.0.0',api:2,author:'Developer',type:'App',category:'Utility'},null,2));
+      this.vfs.write(dir+'/main.js',code);
+      log('💾 Installed '+name+' at '+dir,'ok');
+      this.refreshAppList();
+      this.notif.post('Storage',name+' installed','ok');
+    };
+    $('btn-run-live').onclick=()=>{
+      const name=$('app-name').value.trim()||'Live Test';
+      const code=$('app-code').value;
+      this.launchApp({name,path:'/tmp/live/',pkg:'com.kryon.live'},code);
+    };
+    $('btn-format').onclick=async()=>{if(!confirm('Format virtual flash?'))return;await this.vfs.reset();this.refreshAppList();this.launcher.scan();};
+    $('board-select').onchange=e=>{
+      const b=BOARDS[e.target.value];if(!b)return;
+      this.sim.board=b;
+      this.canvas.width=b.w;this.canvas.height=b.h;
+      this.overlayCanvas.width=b.w;this.overlayCanvas.height=b.h;
+      this.canvas.style.width=(b.w*1.2)+'px';
+      this.canvas.style.height=(b.h*1.2)+'px';
+      this.overlayCanvas.style.width=b.w+'px';
+      this.overlayCanvas.style.height=b.h+'px';
+      this.disp.W=b.w;this.disp.H=b.h;
+      $('board-label').textContent=b.name;
+      this.reboot();
+    };
+    $('sim-time').oninput=e=>{this.sim.timezone=e.target.value;};
+    $('sim-24h').onchange=e=>{this.sim.use24h=e.target.checked;};
+    $('sim-wifi').onchange=e=>{this.sim.wifi=e.target.checked;this.updateStatus();};
+    $('sim-weather').onchange=e=>{this.sim.weather=e.target.value;};
+    $('btn-reboot').onclick=()=>this.reboot();
+    $('btn-launcher').onclick=()=>this.setState(S.LAUNCHER);
+    $('btn-show-touch').onclick=()=>{
+      this.canvas.style.outline='3px solid #00ff88';
+      setTimeout(()=>{this.canvas.style.outline='';},1500);
+      log('[Sim] Touch indicator flashes screen border','dim');
+    };
+    $('btn-clear-log').onclick=()=>{consoleEl.innerHTML='';};
+    this.canvas.style.width=(this.canvas.width*1.2)+'px';
+    this.canvas.style.height=(this.canvas.height*1.2)+'px';
+    this.overlayCanvas.style.width=this.canvas.width+'px';
+    this.overlayCanvas.style.height=this.canvas.height+'px';
+    this.updateStatus();
   }
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  window.KryonOS = new Simulator();
-  log('KryonOS Production Emulator v2.0 initialized.', 'ok');
+/* ─── 14. BOOT ────────────────────────────────────────────────── */
+window.addEventListener('DOMContentLoaded',()=>{
+  log('KryonOS Web Emulator v'+KRYONOS_VERSION,'sys');
+  log('API Level '+KRYONOS_API_LEVEL+' — Duktape 2.7 compatible','sys');
+  log('→ Full System.* / PWM / I2C / Crypto / HttpServer / WebSocket / IPC / AI / Kryon3D surface','dim');
+  log('→ System.delay() is async in browser (blocking on device)','warn');
+  log('→ async/await/Promise in user code is rejected at compile time','warn');
+  window.KryonOS=new Simulator();
+  setTimeout(()=>log('Ready. Launch an app from the Apps tab or write one in Studio.','ok'),400);
 });
 </script>
 </body>
