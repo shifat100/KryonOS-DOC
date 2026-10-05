@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KryonOS Storage Manager</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b0b14;--panel:#161625;--panel2:#1e1e30;--panel3:#252538;
+  --border:#2c2c46;--border2:#3a3a56;
+  --text:#d0d0e0;--dim:#7a7a95;
+  --accent:#00d47a;--accent2:#00b4ff;--warn:#fbbf24;--err:#f43f5e;--ok:#10b981;
+  --purple:#a78bfa;--orange:#fb923c;
+}
+body{
+  background:radial-gradient(ellipse at top,#181828 0%,#080810 100%);
+  color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  min-height:100vh;display:flex;flex-direction:column;
+}
+
+/* ───── Header ───── */
+header{
+  background:linear-gradient(180deg,#161625,#101018);
+  border-bottom:1px solid var(--border);
+  padding:12px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px}
+.brand-icon{
+  width:28px;height:28px;background:rgba(0,212,122,.15);border:1px solid rgba(0,212,122,.4);
+  border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--accent);
+  font-size:16px;
+}
+.brand-sub{font-size:11px;color:var(--dim);font-weight:500;letter-spacing:.3px}
+.stats{
+  display:flex;gap:14px;margin-left:auto;font-size:11px;flex-wrap:wrap;
+}
+.stat{display:flex;align-items:center;gap:6px;background:var(--panel2);padding:5px 10px;
+  border:1px solid var(--border);border-radius:6px}
+.stat-label{color:var(--dim);text-transform:uppercase;letter-spacing:.5px;font-size:9px}
+.stat-val{color:var(--accent);font-weight:700;font-family:Menlo,monospace}
+.conn-badge{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dim)}
+.conn-dot{width:8px;height:8px;border-radius:50%;background:var(--err);box-shadow:0 0 6px var(--err)}
+.conn-dot.on{background:var(--accent);box-shadow:0 0 6px var(--accent)}
+
+/* ───── Toolbar ───── */
+.toolbar{
+  display:flex;gap:8px;padding:10px 20px;background:var(--panel);
+  border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center;
+}
+.btn{
+  background:linear-gradient(180deg,#2d2d45,#22223a);color:#ccc;border:1px solid var(--border2);
+  padding:7px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;
+  transition:all .15s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
+}
+.btn:hover{background:linear-gradient(180deg,#3a3a56,#2a2a42);color:#fff;border-color:#4a4a6a}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:linear-gradient(180deg,#00d47a,#00a35e);color:#000;border-color:#00d47a}
+.btn.primary:hover{filter:brightness(1.1);color:#000}
+.btn.blue{background:linear-gradient(180deg,#3b82f6,#1d4ed8);color:#fff;border-color:#3b82f6}
+.btn.blue:hover{filter:brightness(1.1);color:#fff}
+.btn.danger{background:linear-gradient(180deg,#f43f5e,#be123c);color:#fff;border-color:#f43f5e}
+.btn.danger:hover{filter:brightness(1.1);color:#fff}
+.btn.warn{background:linear-gradient(180deg,#fb923c,#c2410c);color:#fff;border-color:#fb923c}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.search-box{
+  margin-left:auto;display:flex;align-items:center;gap:6px;background:#0a0a14;
+  border:1px solid var(--border);border-radius:6px;padding:6px 10px;min-width:180px;transition:.15s;
+}
+.search-box:focus-within{border-color:var(--accent2);min-width:240px}
+.search-box input{
+  background:transparent;border:none;color:#fff;font-size:12px;outline:none;width:100%;
+  font-family:Menlo,monospace;
+}
+.search-box svg{width:14px;height:14px;color:var(--dim);flex-shrink:0}
+
+/* ───── Main layout ───── */
+.main{display:flex;flex:1;min-height:0;overflow:hidden}
+.tree-pane{
+  width:340px;min-width:240px;background:var(--panel);
+  border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;
+}
+.pane-title{
+  padding:10px 14px;font-size:10px;text-transform:uppercase;letter-spacing:1px;
+  color:var(--dim);font-weight:700;border-bottom:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:center;
+}
+.tree-scroll{flex:1;overflow-y:auto;padding:6px}
+.tree-scroll::-webkit-scrollbar{width:8px}
+.tree-scroll::-webkit-scrollbar-track{background:transparent}
+.tree-scroll::-webkit-scrollbar-thumb{background:#2a2a42;border-radius:4px}
+.tree-scroll::-webkit-scrollbar-thumb:hover{background:#3a3a56}
+
+.node{
+  display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:5px;
+  cursor:pointer;font-size:12px;font-family:Menlo,monospace;color:#c8c8d8;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;user-select:none;
+}
+.node:hover{background:var(--panel2)}
+.node.selected{background:rgba(0,180,255,.18);color:#fff;border-left:2px solid var(--accent2)}
+.node .icon{flex-shrink:0;font-size:13px;width:14px;text-align:center}
+.node .name{flex:1;overflow:hidden;text-overflow:ellipsis}
+.node .size{color:var(--dim);font-size:10px}
+.node-dir .icon{color:var(--orange)}
+.node-file .icon{color:var(--accent2)}
+.node-file.js .icon{color:#f7df1e}
+.node-file.json .icon{color:var(--accent)}
+.node-file.md .icon{color:#94a3b8}
+.node-file.html .icon{color:#fb923c}
+.node-file.css .icon{color:#60a5fa}
+
+.details{
+  flex:1;display:flex;flex-direction:column;background:#0a0a14;
+  min-width:0;overflow:hidden;
+}
+.details-header{
+  padding:12px 18px;background:var(--panel);border-bottom:1px solid var(--border);
+  display:flex;flex-direction:column;gap:6px;
+}
+.details-path{font-family:Menlo,monospace;font-size:13px;color:#fff;word-break:break-all}
+.details-meta{display:flex;gap:14px;font-size:11px;color:var(--dim);flex-wrap:wrap}
+.details-meta span{display:inline-flex;align-items:center;gap:4px}
+.details-meta strong{color:var(--text);font-weight:600}
+.details-body{
+  flex:1;display:flex;flex-direction:column;padding:12px 18px;gap:10px;overflow:hidden;
+}
+.details-actions{display:flex;gap:8px;flex-wrap:wrap}
+.editor-wrap{flex:1;display:flex;flex-direction:column;min-height:0}
+textarea.editor{
+  flex:1;width:100%;background:#05050c;color:#a5e8b8;border:1px solid var(--border);
+  border-radius:8px;padding:14px;font-family:'Menlo','Monaco','Courier New',monospace;
+  font-size:12.5px;line-height:1.6;resize:none;outline:none;tab-size:4;white-space:pre;
+  overflow:auto;
+}
+textarea.editor:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(0,180,255,.1)}
+.empty-state{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  color:var(--dim);gap:14px;padding:40px;text-align:center;
+}
+.empty-icon{font-size:48px;opacity:.3}
+.empty-title{font-size:15px;color:var(--text)}
+.empty-desc{font-size:12px;max-width:340px;line-height:1.6}
+
+/* ───── Log ───── */
+.log-pane{
+  background:#05050c;border-top:1px solid var(--border);
+  height:130px;display:flex;flex-direction:column;
+}
+.log-header{
+  padding:6px 14px;font-size:10px;color:var(--dim);text-transform:uppercase;
+  letter-spacing:1px;font-weight:700;border-bottom:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:center;
+}
+.log-clear{
+  background:transparent;border:none;color:var(--dim);font-size:10px;cursor:pointer;
+  padding:2px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:.5px;
+}
+.log-clear:hover{color:#fff;background:var(--panel2)}
+.log-body{
+  flex:1;overflow-y:auto;padding:6px 14px;font-family:Menlo,monospace;font-size:11px;
+  line-height:1.55;
+}
+.log-body::-webkit-scrollbar{width:8px}
+.log-body::-webkit-scrollbar-thumb{background:#1a1a2a;border-radius:4px}
+.log-line{color:#6ee7b7}
+.log-line .t{color:#4a4a68;margin-right:6px}
+.log-line.info{color:#38bdf8}
+.log-line.warn{color:#fbbf24}
+.log-line.err{color:#ff6b6b}
+.log-line.ok{color:#4ade80}
+
+/* ───── Modal ───── */
+.modal-backdrop{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);
+  z-index:1000;align-items:center;justify-content:center;padding:20px;
+}
+.modal-backdrop.open{display:flex}
+.modal{
+  background:linear-gradient(145deg,#1f1f32,#141420);border:1px solid var(--border2);
+  border-radius:12px;padding:22px;max-width:520px;width:100%;
+  box-shadow:0 30px 80px rgba(0,0,0,.7);
+}
+.modal h3{font-size:15px;margin-bottom:6px;color:#fff}
+.modal p{font-size:12px;color:var(--dim);line-height:1.6;margin-bottom:16px}
+.modal input[type=text],.modal textarea{
+  width:100%;background:#0a0a14;color:#fff;border:1px solid var(--border);
+  border-radius:6px;padding:9px 12px;font-family:Menlo,monospace;font-size:12px;
+  outline:none;margin-bottom:10px;
+}
+.modal input[type=text]:focus,.modal textarea:focus{border-color:var(--accent2)}
+.modal textarea{min-height:120px;resize:vertical}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+
+/* ───── Drop overlay ───── */
+.drop-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,212,122,.12);
+  border:3px dashed var(--accent);z-index:2000;align-items:center;justify-content:center;
+  color:var(--accent);font-size:18px;font-weight:700;backdrop-filter:blur(2px);
+}
+.drop-overlay.open{display:flex}
+
+/* ───── Responsive ───── */
+@media (max-width:760px){
+  .main{flex-direction:column}
+  .tree-pane{width:100%;height:38vh;border-right:none;border-bottom:1px solid var(--border)}
+  .stats{width:100%;margin-left:0;order:3}
+  .log-pane{height:100px}
+  .search-box{margin-left:0;width:100%}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-icon">K</div>
+    <div>
+      <div>KryonOS Storage Manager</div>
+      <div class="brand-sub">IndexedDB Virtual Filesystem Inspector</div>
+    </div>
+  </div>
+  <div class="stats">
+    <div class="stat"><span class="stat-label">Files</span><span class="stat-val" id="stat-files">0</span></div>
+    <div class="stat"><span class="stat-label">Dirs</span><span class="stat-val" id="stat-dirs">0</span></div>
+    <div class="stat"><span class="stat-label">Used</span><span class="stat-val" id="stat-used">0 B</span></div>
+    <div class="stat"><span class="stat-label">DB</span><span class="stat-val" id="stat-db">—</span></div>
+  </div>
+  <div class="conn-badge">
+    <span class="conn-dot" id="conn-dot"></span>
+    <span id="conn-text">Connecting...</span>
+  </div>
+</header>
+
+<div class="toolbar">
+  <button class="btn" id="btn-refresh" title="Reload from IndexedDB">↻ Refresh</button>
+  <button class="btn primary" id="btn-new-file" title="Create new file">+ File</button>
+  <button class="btn primary" id="btn-new-dir" title="Create new folder">+ Folder</button>
+  <label class="btn blue" title="Upload file(s) into selected folder">
+    ⇪ Upload
+    <input type="file" id="file-upload" multiple style="display:none">
+  </label>
+  <button class="btn" id="btn-export" title="Download all records as JSON">⬇ Export JSON</button>
+  <label class="btn" title="Import records from JSON backup">
+    ⬆ Import JSON
+    <input type="file" id="file-import" accept="application/json,.json" style="display:none">
+  </label>
+  <button class="btn warn" id="btn-reset" title="Clear all files (emulator reseeds defaults on next boot)">⚠ Format</button>
+  <div class="search-box">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+    <input type="text" id="search" placeholder="Filter paths..." autocomplete="off">
+  </div>
+</div>
+
+<div class="main">
+  <div class="tree-pane">
+    <div class="pane-title">
+      <span>Filesystem</span>
+      <span id="tree-count" style="color:var(--dim);font-size:10px">0 entries</span>
+    </div>
+    <div class="tree-scroll" id="tree"></div>
+  </div>
+  <div class="details">
+    <div class="details-header" id="details-header">
+      <div class="details-path">No file selected</div>
+      <div class="details-meta">
+        <span id="meta-type">—</span>
+        <span id="meta-size">—</span>
+        <span id="meta-modified">—</span>
+      </div>
+    </div>
+    <div class="details-body" id="details-body">
+      <div class="empty-state">
+        <div class="empty-icon">📁</div>
+        <div class="empty-title">Select a file</div>
+        <div class="empty-desc">Choose a file from the tree to view or edit its contents. Directories can hold new files and folders.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="log-pane">
+  <div class="log-header">
+    <span>Activity Log</span>
+    <button class="log-clear" id="log-clear">Clear</button>
+  </div>
+  <div class="log-body" id="log"></div>
+</div>
+
+<!-- Modal: New File/Folder -->
+<div class="modal-backdrop" id="modal-create">
+  <div class="modal">
+    <h3 id="modal-create-title">New Item</h3>
+    <p id="modal-create-desc">Enter the name for the new item.</p>
+    <input type="text" id="modal-create-input" placeholder="filename.js" autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn" data-close="modal-create">Cancel</button>
+      <button class="btn primary" id="modal-create-ok">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Rename -->
+<div class="modal-backdrop" id="modal-rename">
+  <div class="modal">
+    <h3>Rename Item</h3>
+    <p>Enter a new name. This performs a delete + recreate since paths are the store key.</p>
+    <input type="text" id="modal-rename-input" autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn" data-close="modal-rename">Cancel</button>
+      <button class="btn primary" id="modal-rename-ok">Rename</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Confirm -->
+<div class="modal-backdrop" id="modal-confirm">
+  <div class="modal">
+    <h3 id="modal-confirm-title">Confirm</h3>
+    <p id="modal-confirm-desc">Are you sure?</p>
+    <div class="modal-actions">
+      <button class="btn" data-close="modal-confirm">Cancel</button>
+      <button class="btn danger" id="modal-confirm-ok">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div class="drop-overlay" id="drop-overlay">📥 Drop files here to upload</div>
+
+<script>
+'use strict';
+const DB_NAME = 'KryonOS_VFS_v7';
+const STORE = 'files';
+
+const $ = id => document.getElementById(id);
+
+// ─── Logging ─────────────────────────────────────────────────
+function log(msg, cls) {
+  const d = document.createElement('div');
+  d.className = 'log-line' + (cls ? ' ' + cls : '');
+  const t = new Date().toLocaleTimeString('en-GB', {hour12:false});
+  d.innerHTML = `<span class="t">${t}</span>${escapeHtml(msg)}`;
+  $('log').appendChild(d);
+  while ($('log').children.length > 300) $('log').removeChild($('log').firstChild);
+  $('log').scrollTop = $('log').scrollHeight;
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ─── IndexedDB helpers ───────────────────────────────────────
+let db = null;
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = e => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains(STORE)) {
+        d.createObjectStore(STORE, {keyPath:'path'});
+      }
+    };
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror = () => reject(req.error || new Error('IDB open failed'));
+    req.onblocked = () => reject(new Error('IDB upgrade blocked (close other tabs)'));
+  });
+}
+
+function readAll() {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readonly');
+    const req = tx.objectStore(STORE).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function putRecord(rec) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    const req = tx.objectStore(STORE).put(rec);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function deleteRecord(path) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    const req = tx.objectStore(STORE).delete(path);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function clearStore() {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    const req = tx.objectStore(STORE).clear();
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function bulkPut(records) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    const store = tx.objectStore(STORE);
+    for (const rec of records) store.put(rec);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+// ─── State ───────────────────────────────────────────────────
+let records = [];         // flat list from IDB
+let treeRoot = null;      // built tree
+let expanded = new Set(['/', '/local', '/sd']); // path -> expanded
+let selectedPath = null;
+let filterText = '';
+let lastSignature = '';
+
+// ─── Utilities ───────────────────────────────────────────────
+function formatBytes(b) {
+  if (b === 0) return '0 B';
+  const k = 1024, sizes = ['B','KB','MB','GB'];
+  const i = Math.floor(Math.log(b) / Math.log(k));
+  return (b / Math.pow(k, i)).toFixed(i ? 1 : 0) + ' ' + sizes[i];
+}
+function formatDate(ts) {
+  if (!ts) return '—';
+  try {
+    const d = new Date(ts);
+    return d.toLocaleString('en-GB', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
+  } catch (e) { return String(ts); }
+}
+function parentPath(p) {
+  if (p === '/' || !p) return '/';
+  const parts = p.split('/').filter(Boolean);
+  parts.pop();
+  return parts.length ? '/' + parts.join('/') : '/';
+}
+function joinPath(a, b) {
+  if (a === '/') return '/' + b;
+  return a + '/' + b;
+}
+function normalizePath(p) {
+  let c = String(p || '').replace(/\/+/g, '/');
+  if (c.length > 1 && c.endsWith('/')) c = c.slice(0, -1);
+  if (!c.startsWith('/')) c = '/' + c;
+  return c;
+}
+function fileExt(name) {
+  const i = name.lastIndexOf('.');
+  return i >= 0 ? name.slice(i+1).toLowerCase() : '';
+}
+function fileIcon(name, isDir) {
+  if (isDir) return '📁';
+  const ext = fileExt(name);
+  if (['js','mjs'].includes(ext)) return '📜';
+  if (ext === 'json') return '{}';
+  if (['png','jpg','jpeg','gif','bmp'].includes(ext)) return '🖼';
+  if (['md','txt'].includes(ext)) return '📄';
+  if (ext === 'html') return '🌐';
+  if (ext === 'css') return '🎨';
+  return '📄';
+}
+function recordSignature(recs) {
+  // Lightweight change detector
+  let h = 0;
+  for (const r of recs) h = (h * 31 + r.path.length * 17 + (r.size|0) + (r.modified|0)) >>> 0;
+  return recs.length + ':' + h.toString(16);
+}
+
+// ─── Tree building ───────────────────────────────────────────
+function buildTree(recs) {
+  const nodes = new Map();
+  nodes.set('/', {path:'/', isDir:true, children:[]});
+  for (const r of recs) {
+    if (r.path === '/') continue;
+    nodes.set(r.path, {
+      path: r.path,
+      name: r.path.split('/').filter(Boolean).pop(),
+      isDir: !!r.isDir,
+      size: r.size || 0,
+      modified: r.modified || 0,
+      content: r.isDir ? null : r.content,
+      children: r.isDir ? [] : null
+    });
+  }
+  for (const [path, node] of nodes) {
+    if (path === '/') continue;
+    const parent = parentPath(path);
+    if (nodes.has(parent)) {
+      nodes.get(parent).children.push(node);
+    } else {
+      // Orphan — attach to root
+      nodes.get('/').children.push(node);
+    }
+  }
+  // Sort: dirs first, then alpha
+  for (const node of nodes.values()) {
+    if (node.children) {
+      node.children.sort((a,b) => {
+        if (a.isDir && !b.isDir) return -1;
+        if (!a.isDir && b.isDir) return 1;
+        return a.name.localeCompare(b.name);
+      });
+    }
+  }
+  return nodes.get('/');
+}
+
+// ─── Rendering ───────────────────────────────────────────────
+function renderTree() {
+  const treeEl = $('tree');
+  treeEl.innerHTML = '';
+  if (!treeRoot) return;
+
+  const filter = filterText.toLowerCase().trim();
+  const matchNode = node => {
+    if (!filter) return true;
+    if (node.path.toLowerCase().includes(filter)) return true;
+    if (node.children) return node.children.some(matchNode);
+    return false;
+  };
+
+  let visibleCount = 0;
+  const walk = (node, depth) => {
+    if (node.path !== '/' && !matchNode(node)) return;
+    if (node.path !== '/') visibleCount++;
+
+    if (node.path !== '/') {
+      const el = document.createElement('div');
+      el.className = 'node ' + (node.isDir ? 'node-dir' : 'node-file');
+      if (!node.isDir) el.classList.add(fileExt(node.name) || 'bin');
+      if (node.path === selectedPath) el.classList.add('selected');
+      el.style.paddingLeft = (6 + depth * 12) + 'px';
+      el.dataset.path = node.path;
+
+      const hasChildren = node.children && node.children.length > 0;
+      const isOpen = expanded.has(node.path);
+      const twist = hasChildren ? (isOpen ? '▾' : '▸') : ' ';
+      const icon = fileIcon(node.name, node.isDir);
+
+      el.innerHTML =
+        `<span class="icon" style="width:12px">${twist}</span>` +
+        `<span class="icon">${icon}</span>` +
+        `<span class="name">${escapeHtml(node.name)}</span>` +
+        (node.isDir ? '' : `<span class="size">${formatBytes(node.size)}</span>`);
+
+      el.onclick = (e) => {
+        e.stopPropagation();
+        if (node.isDir) {
+          if (hasChildren) {
+            if (isOpen) expanded.delete(node.path);
+            else expanded.add(node.path);
+            renderTree();
+          }
+          selectPath(node.path);
+        } else {
+          selectPath(node.path);
+        }
+      };
+      el.ondblclick = (e) => {
+        e.stopPropagation();
+        if (node.isDir && hasChildren) {
+          if (isOpen) expanded.delete(node.path);
+          else expanded.add(node.path);
+          renderTree();
+        }
+      };
+      // Context menu (right click)
+      el.oncontextmenu = (e) => {
+        e.preventDefault();
+        selectPath(node.path);
+        // Simple inline prompt for rename/delete
+        const action = prompt(
+          `Action for "${node.name}"?\n\n1 = Rename\n2 = Delete\n\nEnter number:`,
+          '1'
+        );
+        if (action === '1') openRenameModal(node.path);
+        else if (action === '2') confirmDelete(node.path);
+      };
+
+      treeEl.appendChild(el);
+    }
+
+    if (node.isDir && node.children && (node.path === '/' || expanded.has(node.path))) {
+      for (const child of node.children) walk(child, depth + 1);
+    }
+  };
+  walk(treeRoot, 0);
+
+  $('tree-count').textContent = visibleCount + ' entries';
+}
+
+function selectPath(path) {
+  selectedPath = path;
+  renderTree();
+  renderDetails();
+}
+
+function renderDetails() {
+  const header = $('details-header');
+  const body = $('details-body');
+
+  if (!selectedPath) {
+    header.querySelector('.details-path').textContent = 'No file selected';
+    $('meta-type').textContent = '—';
+    $('meta-size').textContent = '—';
+    $('meta-modified').textContent = '—';
+    body.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📁</div>
+        <div class="empty-title">Select a file</div>
+        <div class="empty-desc">Choose a file from the tree to view or edit its contents. Directories can hold new files and folders.</div>
+      </div>`;
+    return;
+  }
+
+  const rec = records.find(r => r.path === selectedPath);
+  if (!rec) {
+    header.querySelector('.details-path').textContent = selectedPath;
+    $('meta-type').textContent = 'missing';
+    $('meta-size').textContent = '—';
+    $('meta-modified').textContent = '—';
+    body.innerHTML = `<div class="empty-state"><div class="empty-title">Record missing</div></div>`;
+    return;
+  }
+
+  header.querySelector('.details-path').textContent = rec.path;
+  $('meta-type').innerHTML = '<strong>' + (rec.isDir ? 'Directory' : 'File') + '</strong>';
+  $('meta-size').innerHTML = '<strong>' + (rec.isDir ? '—' : formatBytes(rec.size || (rec.content||'').length)) + '</strong>';
+  $('meta-modified').innerHTML = '<strong>' + formatDate(rec.modified) + '</strong>';
+
+  body.innerHTML = '';
+
+  const actions = document.createElement('div');
+  actions.className = 'details-actions';
+
+  if (rec.isDir) {
+    const bNewFile = btn('+ File Here', 'primary', () => openCreateModal('file', rec.path));
+    const bNewDir = btn('+ Folder Here', 'primary', () => openCreateModal('dir', rec.path));
+    const bUpload = document.createElement('label');
+    bUpload.className = 'btn blue';
+    bUpload.innerHTML = '⇪ Upload Here';
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.multiple = true; inp.style.display = 'none';
+    inp.onchange = () => handleUploadInto(rec.path, inp.files);
+    bUpload.appendChild(inp);
+    const bRename = btn('✎ Rename', '', () => openRenameModal(rec.path));
+    const bDelete = btn('🗑 Delete', 'danger', () => confirmDelete(rec.path));
+    actions.append(bNewFile, bNewDir, bUpload, bRename, bDelete);
+    body.appendChild(actions);
+
+    const info = document.createElement('div');
+    info.className = 'empty-state';
+    const childCount = records.filter(r => parentPath(r.path) === rec.path).length;
+    info.innerHTML = `<div class="empty-icon">📁</div>
+      <div class="empty-title">Directory</div>
+      <div class="empty-desc">Contains ${childCount} direct entr${childCount === 1 ? 'y' : 'ies'}.</div>`;
+    body.appendChild(info);
+  } else {
+    const bSave = btn('💾 Save', 'primary', () => saveCurrentFile());
+    const bCopy = btn('📋 Copy Path', '', () => { navigator.clipboard.writeText(rec.path); log('Path copied','ok'); });
+    const bCopyContent = btn('📋 Copy Content', '', () => { navigator.clipboard.writeText(rec.content||''); log('Content copied','ok'); });
+    const bDownload = btn('⬇ Download', '', () => downloadFile(rec));
+    const bRename = btn('✎ Rename', '', () => openRenameModal(rec.path));
+    const bDelete = btn('🗑 Delete', 'danger', () => confirmDelete(rec.path));
+
+    // JSON pretty print if applicable
+    const ext = fileExt(rec.name || rec.path);
+    if (ext === 'json') {
+      actions.appendChild(btn('✨ Format JSON', '', () => {
+        const ta = $('file-content');
+        if (!ta) return;
+        try {
+          const parsed = JSON.parse(ta.value);
+          ta.value = JSON.stringify(parsed, null, 2);
+          log('JSON reformatted', 'ok');
+        } catch (e) {
+          alert('Invalid JSON: ' + e.message);
+        }
+      }));
+    }
+
+    actions.append(bSave, bCopy, bCopyContent, bDownload, bRename, bDelete);
+    body.appendChild(actions);
+
+    const wrap = document.createElement('div');
+    wrap.className = 'editor-wrap';
+    const ta = document.createElement('textarea');
+    ta.className = 'editor';
+    ta.id = 'file-content';
+    ta.spellcheck = false;
+    ta.value = rec.content != null ? rec.content : '';
+    ta.addEventListener('input', () => { ta.dataset.dirty = '1'; });
+    // Tab inserts spaces
+    ta.addEventListener('keydown', e => {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const s = ta.selectionStart, end = ta.selectionEnd;
+        ta.value = ta.value.substring(0, s) + '    ' + ta.value.substring(end);
+        ta.selectionStart = ta.selectionEnd = s + 4;
+        ta.dataset.dirty = '1';
+      }
+      // Ctrl+S saves
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        saveCurrentFile();
+      }
+    });
+    wrap.appendChild(ta);
+    body.appendChild(wrap);
+  }
+}
+
+function btn(label, cls, onClick) {
+  const b = document.createElement('button');
+  b.className = 'btn' + (cls ? ' ' + cls : '');
+  b.textContent = label;
+  b.onclick = onClick;
+  return b;
+}
+
+// ─── Actions ─────────────────────────────────────────────────
+async function refresh(showLog = true) {
+  try {
+    const recs = await readAll();
+    const sig = recordSignature(recs);
+    if (sig === lastSignature && !showLog) return;
+    lastSignature = sig;
+    records = recs;
+    treeRoot = buildTree(records);
+    renderTree();
+    renderDetails();
+    updateStats();
+    if (showLog) log(`Loaded ${recs.length} records from IndexedDB`, 'info');
+  } catch (e) {
+    log('Refresh error: ' + e.message, 'err');
+  }
+}
+
+function updateStats() {
+  const files = records.filter(r => !r.isDir);
+  const dirs = records.filter(r => r.isDir);
+  const used = files.reduce((s, r) => s + (r.size || 0), 0);
+  $('stat-files').textContent = files.length;
+  $('stat-dirs').textContent = dirs.length;
+  $('stat-used').textContent = formatBytes(used);
+  $('stat-db').textContent = DB_NAME.replace('KryonOS_VFS_', '');
+}
+
+async function saveCurrentFile() {
+  if (!selectedPath) return;
+  const ta = $('file-content');
+  if (!ta) return;
+  const rec = records.find(r => r.path === selectedPath);
+  if (!rec || rec.isDir) return;
+  const content = ta.value;
+  try {
+    await putRecord({
+      path: rec.path,
+      content,
+      isDir: false,
+      size: content.length,
+      modified: Date.now()
+    });
+    ta.dataset.dirty = '';
+    log(`Saved ${rec.path} (${content.length} bytes)`, 'ok');
+    await refresh(false);
+  } catch (e) {
+    log('Save failed: ' + e.message, 'err');
+  }
+}
+
+async function createFileOrDir(parent, name, isDir) {
+  const cleanParent = normalizePath(parent);
+  const cleanName = name.trim();
+  if (!cleanName) return;
+  if (cleanName.includes('/')) { alert('Name cannot contain "/"'); return; }
+  const fullPath = joinPath(cleanParent, cleanName);
+  if (records.some(r => r.path === fullPath)) {
+    alert('Already exists: ' + fullPath);
+    return;
+  }
+  try {
+    await putRecord({
+      path: fullPath,
+      content: isDir ? null : '',
+      isDir,
+      size: 0,
+      modified: Date.now()
+    });
+    log(`Created ${isDir ? 'folder' : 'file'}: ${fullPath}`, 'ok');
+    if (isDir) expanded.add(cleanParent);
+    await refresh(false);
+    selectPath(fullPath);
+  } catch (e) {
+    log('Create failed: ' + e.message, 'err');
+  }
+}
+
+async function deleteItem(path) {
+  const rec = records.find(r => r.path === path);
+  if (!rec) return;
+  const children = records.filter(r => r.path.startsWith(path + '/'));
+  try {
+    const tx = db.transaction(STORE, 'readwrite');
+    const store = tx.objectStore(STORE);
+    store.delete(path);
+    for (const c of children) store.delete(c.path);
+    await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+    log(`Deleted ${path}${children.length ? ' (+' + children.length + ' children)' : ''}`, 'warn');
+    if (selectedPath === path || selectedPath.startsWith(path + '/')) {
+      selectedPath = null;
+    }
+    await refresh(false);
+  } catch (e) {
+    log('Delete failed: ' + e.message, 'err');
+  }
+}
+
+async function renameItem(oldPath, newName) {
+  const cleanName = newName.trim();
+  if (!cleanName) return;
+  if (cleanName.includes('/')) { alert('Name cannot contain "/"'); return; }
+  const rec = records.find(r => r.path === oldPath);
+  if (!rec) return;
+  const newPath = joinPath(parentPath(oldPath), cleanName);
+  if (newPath === oldPath) return;
+  if (records.some(r => r.path === newPath)) {
+    alert('Already exists: ' + newPath);
+    return;
+  }
+  try {
+    // Collect subtree
+    const subtree = records.filter(r => r.path === oldPath || r.path.startsWith(oldPath + '/'));
+    const tx = db.transaction(STORE, 'readwrite');
+    const store = tx.objectStore(STORE);
+    for (const r of subtree) {
+      store.delete(r.path);
+      const rel = r.path.slice(oldPath.length);
+      store.put({
+        path: newPath + rel,
+        content: r.content,
+        isDir: r.isDir,
+        size: r.size,
+        modified: Date.now()
+      });
+    }
+    await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+    log(`Renamed ${oldPath} → ${newPath}`, 'ok');
+    if (selectedPath === oldPath) selectedPath = newPath;
+    await refresh(false);
+  } catch (e) {
+    log('Rename failed: ' + e.message, 'err');
+  }
+}
+
+async function handleUploadInto(folder, files) {
+  if (!files || !files.length) return;
+  try {
+    for (const f of files) {
+      const content = await f.text();
+      const path = joinPath(folder, f.name);
+      await putRecord({
+        path,
+        content,
+        isDir: false,
+        size: content.length,
+        modified: Date.now()
+      });
+      log(`Uploaded ${f.name} → ${path} (${content.length} bytes)`, 'ok');
+    }
+    expanded.add(folder);
+    await refresh(false);
+  } catch (e) {
+    log('Upload failed: ' + e.message, 'err');
+  }
+}
+
+function downloadFile(rec) {
+  const blob = new Blob([rec.content || ''], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = rec.path.split('/').pop();
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+  log('Downloaded ' + a.download, 'info');
+}
+
+async function exportAll() {
+  try {
+    const data = {
+      app: 'KryonOS_VFS',
+      version: DB_NAME,
+      exportedAt: new Date().toISOString(),
+      records: records
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    const ts = new Date().toISOString().replace(/[:.]/g,'-');
+    a.download = `kryonos_vfs_${ts}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+    log(`Exported ${records.length} records`, 'ok');
+  } catch (e) {
+    log('Export failed: ' + e.message, 'err');
+  }
+}
+
+async function importAll(file) {
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    const recs = Array.isArray(data) ? data : (data.records || []);
+    if (!recs.length) { alert('No records found in file'); return; }
+    const merge = confirm(`Import ${recs.length} records.\n\nOK = Merge with existing\nCancel = Replace everything`);
+    if (!merge) {
+      await clearStore();
+      log('Cleared store before import', 'warn');
+    }
+    // Normalize
+    const cleaned = recs
+      .filter(r => r && typeof r.path === 'string')
+      .map(r => ({
+        path: normalizePath(r.path),
+        content: r.isDir ? null : String(r.content != null ? r.content : ''),
+        isDir: !!r.isDir,
+        size: r.isDir ? 0 : String(r.content != null ? r.content : '').length,
+        modified: r.modified || Date.now()
+      }));
+    await bulkPut(cleaned);
+    log(`Imported ${cleaned.length} records`, 'ok');
+    await refresh(false);
+  } catch (e) {
+    log('Import failed: ' + e.message, 'err');
+    alert('Import failed: ' + e.message);
+  }
+}
+
+// ─── Modals ──────────────────────────────────────────────────
+function openModal(id) { $(id).classList.add('open'); }
+function closeModal(id) { $(id).classList.remove('open'); }
+
+let createContext = { parent: '/', isDir: false };
+function openCreateModal(type, parent) {
+  createContext = { parent, isDir: type === 'dir' };
+  $('modal-create-title').textContent = type === 'dir' ? 'New Folder' : 'New File';
+  $('modal-create-desc').textContent = `Create inside ${parent}`;
+  $('modal-create-input').value = '';
+  $('modal-create-input').placeholder = type === 'dir' ? 'myfolder' : 'myfile.js';
+  openModal('modal-create');
+  setTimeout(() => $('modal-create-input').focus(), 60);
+}
+$('modal-create-ok').onclick = () => {
+  const v = $('modal-create-input').value;
+  closeModal('modal-create');
+  createFileOrDir(createContext.parent, v, createContext.isDir);
+};
+$('modal-create-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') $('modal-create-ok').click();
+});
+
+let renameContext = null;
+function openRenameModal(path) {
+  const rec = records.find(r => r.path === path);
+  if (!rec) return;
+  renameContext = path;
+  $('modal-rename-input').value = rec.path.split('/').pop();
+  openModal('modal-rename');
+  setTimeout(() => $('modal-rename-input').focus(), 60);
+}
+$('modal-rename-ok').onclick = () => {
+  const v = $('modal-rename-input').value;
+  closeModal('modal-rename');
+  if (renameContext) renameItem(renameContext, v);
+};
+$('modal-rename-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') $('modal-rename-ok').click();
+});
+
+let confirmAction = null;
+function showConfirm(title, desc, action) {
+  $('modal-confirm-title').textContent = title;
+  $('modal-confirm-desc').textContent = desc;
+  confirmAction = action;
+  openModal('modal-confirm');
+}
+$('modal-confirm-ok').onclick = () => {
+  closeModal('modal-confirm');
+  const fn = confirmAction;
+  confirmAction = null;
+  if (fn) fn();
+};
+
+function confirmDelete(path) {
+  const rec = records.find(r => r.path === path);
+  if (!rec) return;
+  const kids = records.filter(r => r.path.startsWith(path + '/')).length;
+  const desc = kids
+    ? `Delete "${path}" and ${kids} nested item${kids === 1 ? '' : 's'}? This cannot be undone.`
+    : `Delete "${path}"? This cannot be undone.`;
+  showConfirm('Delete Item', desc, () => deleteItem(path));
+}
+
+document.querySelectorAll('[data-close]').forEach(el => {
+  el.onclick = () => closeModal(el.dataset.close);
+});
+document.querySelectorAll('.modal-backdrop').forEach(el => {
+  el.onclick = e => { if (e.target === el) closeModal(el.id); };
+});
+
+// ─── Toolbar wiring ──────────────────────────────────────────
+$('btn-refresh').onclick = () => refresh(true);
+$('btn-new-file').onclick = () => openCreateModal('file', selectedPath && records.find(r=>r.path===selectedPath)?.isDir ? selectedPath : '/local');
+$('btn-new-dir').onclick  = () => openCreateModal('dir',  selectedPath && records.find(r=>r.path===selectedPath)?.isDir ? selectedPath : '/local');
+$('file-upload').onchange = e => {
+  const parent = selectedPath && records.find(r=>r.path===selectedPath)?.isDir ? selectedPath : '/local';
+  handleUploadInto(parent, e.target.files);
+  e.target.value = '';
+};
+$('file-import').onchange = e => {
+  if (e.target.files[0]) importAll(e.target.files[0]);
+  e.target.value = '';
+};
+$('btn-export').onclick = exportAll;
+$('btn-reset').onclick = () => {
+  showConfirm(
+    'Format Virtual Flash',
+    `This will delete ALL ${records.length} records from IndexedDB. The emulator will reseed default demo apps the next time it boots. Continue?`,
+    async () => {
+      await clearStore();
+      log('Store cleared', 'warn');
+      selectedPath = null;
+      await refresh(false);
+    }
+  );
+};
+$('search').oninput = e => { filterText = e.target.value; renderTree(); };
+$('log-clear').onclick = () => { $('log').innerHTML = ''; };
+
+// ─── Drag & drop ─────────────────────────────────────────────
+let dragCounter = 0;
+const dropOverlay = $('drop-overlay');
+window.addEventListener('dragenter', e => {
+  e.preventDefault();
+  dragCounter++;
+  dropOverlay.classList.add('open');
+});
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('dragleave', e => {
+  e.preventDefault();
+  dragCounter--;
+  if (dragCounter <= 0) { dragCounter = 0; dropOverlay.classList.remove('open'); }
+});
+window.addEventListener('drop', async e => {
+  e.preventDefault();
+  dragCounter = 0;
+  dropOverlay.classList.remove('open');
+  if (!e.dataTransfer || !e.dataTransfer.files.length) return;
+  const parent = selectedPath && records.find(r=>r.path===selectedPath)?.isDir ? selectedPath : '/local';
+  log(`Dropping ${e.dataTransfer.files.length} file(s) into ${parent}`, 'info');
+  await handleUploadInto(parent, e.dataTransfer.files);
+});
+
+// ─── Keyboard ────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-backdrop.open').forEach(m => m.classList.remove('open'));
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && selectedPath) {
+    const ta = $('file-content');
+    if (ta && document.activeElement === ta) {
+      e.preventDefault();
+      saveCurrentFile();
+    }
+  }
+});
+
+// ─── Boot ────────────────────────────────────────────────────
+(async function boot() {
+  log('KryonOS Storage Manager starting...', 'info');
+  log(`Target database: ${DB_NAME} / store: ${STORE}`, 'dim');
+  try {
+    db = await openDB();
+    $('conn-dot').classList.add('on');
+    $('conn-text').textContent = 'Connected';
+    log('IndexedDB connection established', 'ok');
+    await refresh(true);
+  } catch (e) {
+    $('conn-dot').classList.remove('on');
+    $('conn-text').textContent = 'Disconnected';
+    log('Failed to open IndexedDB: ' + e.message, 'err');
+    log('Tip: if you see "Access denied", make sure this file is served from the same origin as the KryonOS emulator (both file:// or both http://).', 'warn');
+  }
+
+  // Poll for changes (updates from the emulator)
+  setInterval(() => { if (db) refresh(false); }, 1500);
+  // Full refresh every 15s to update stats/log
+  setInterval(() => { if (db) refresh(false); }, 15000);
+})();
+</script>
+</body>
+</html>
